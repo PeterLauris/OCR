@@ -17,7 +17,22 @@ static const l_int32  MAX_WORD_HEIGHT = 100;
 #define   BINARY_THRESHOLD			130
 
 
-int findWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, NUMAA *naa){
+#define   DESKEW_REDUCTION      2      /* 1, 2 or 4 */
+
+/* sweep only */
+#define   SWEEP_RANGE           10.    /* degrees */
+#define   SWEEP_DELTA           0.2    /* degrees */
+#define   SWEEP_REDUCTION       2      /* 1, 2, 4 or 8 */
+
+/* sweep and search */
+#define   SWEEP_RANGE2          10.    /* degrees */
+#define   SWEEP_DELTA2          1.     /* degrees */
+#define   SWEEP_REDUCTION2      2      /* 1, 2, 4 or 8 */
+#define   SEARCH_REDUCTION      2      /* 1, 2, 4 or 8 */
+#define   SEARCH_MIN_DELTA      0.01   /* degrees */
+
+
+void findWords(PIX *pixt1, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, NUMAA *naa){
 	char         filename[BUF_SIZE];
 	l_int32      i, j, w, h, ncomp;
 	l_int32      index, ival, rval, gval, bval;
@@ -26,14 +41,13 @@ int findWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, N
 	JBDATA      *data;
 	JBCLASSER   *classer;
 	NUMA        *nai;
-	PIX         *pixt, *pixt1, *pixt2, *pixd;
+	PIX         *pixt2, *pixd;
 	PIXCMAP     *cmap;
-	static char  mainName[] = "wordsinorder";
 
 	char targetPath[1024];
 
 
-	pixGetWordBoxesInTextlines(pixs, 2, MIN_WORD_WIDTH, MIN_WORD_HEIGHT,
+	pixGetWordBoxesInTextlines(pixt1, 1, MIN_WORD_WIDTH, MIN_WORD_HEIGHT,
 		MAX_WORD_WIDTH, MAX_WORD_HEIGHT,
 		&boxa, &nai);
 	boxaaAddBoxa(baa, boxa, L_INSERT);
@@ -43,15 +57,10 @@ int findWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, N
 	/* Show the results on a 2x reduced image, where each
 	* word is outlined and the color of the box depends on the
 	* computed textline. */
-	if (pixGetDepth(pixs) != 1) printf("pixs is not binary\n");
-	pixt = pixConvertTo1(pixs, 150);
-	pixt1 = pixReduceRankBinary2(pixt, 2, NULL);
-	if (!pixt1) printf("pixt1 is null\n");
 	pixGetDimensions(pixt1, &w, &h, NULL);
 	pixd = pixCreate(w, h, 8);
 	printf("%d, %d\n", w, h);
-	if ((pixCreateHeader(w, h, 8)) == NULL)
-		printf("pixd not made\n");
+	//if ((pixCreateHeader(w, h, 8)) == NULL) printf("pixd not made\n");
 	if (!pixd) printf("pix not defined\n");
 	cmap = pixcmapCreateRandom(8, 1, 1);  /* first color is black */
 	pixSetColormap(pixd, cmap);
@@ -75,20 +84,39 @@ int findWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, N
 	printf("file path: %s", targetPath);
 	pixWrite(targetPath, pixd, IFF_JFIF_JPEG);
 	//free(targetPath);
-	pixDestroy(&pixt);
-	pixDestroy(&pixt1);
 	pixDestroy(&pixt2);
 	pixDestroy(&pixd);
 	//getchar();
 #endif  /* RENDER	_PAGES */
 }
 
+void findSkew(PIX *pixs, l_float32 &angle, l_float32 &conf, l_float32 &score) {
+	//pixFindSkew(pixs, &angle, &conf);
+
+	pixFindSkewSweepAndSearchScorePivot(pixs, &angle, &conf, &score,
+		SWEEP_REDUCTION2, SEARCH_REDUCTION,
+		0.0, SWEEP_RANGE2, SWEEP_DELTA2,
+		SEARCH_MIN_DELTA,
+		L_SHEAR_ABOUT_CORNER);
+	fprintf(stderr, "pixFind...Pivot(about corner):\n"
+		"  conf = %5.3f, angle = %7.3f degrees, score = %f\n",
+		conf, angle, score);
+
+	/*pixFindSkewSweepAndSearchScorePivot(pix_deskew, &angle, &conf, &score,
+	SWEEP_REDUCTION2, SEARCH_REDUCTION,
+	0.0, SWEEP_RANGE2, SWEEP_DELTA2,
+	SEARCH_MIN_DELTA,
+	L_SHEAR_ABOUT_CENTER);
+	fprintf(stderr, "pixFind...Pivot(about center):\n"
+	"  conf = %5.3f, angle = %7.3f degrees, score = %f\n",
+	conf, angle, score);*/
+}
+
 int main() {
 	char        *dirin, *dirout, *rootname, *fname;
 
-	PIX *pixs;
+	PIX *pixs, *pixt, *pixt1, *pix_deskew;
 
-	//if (argc == 3) {
 	l_int32 firstpage = 0;
 	l_int32 npages = 0;
 
@@ -115,11 +143,26 @@ int main() {
 			continue;
 		}
 
-		pixs = pixConvertTo1(pixs, 130); //convert to binary
+		l_float32    angle, conf, score;
 
-		findWords(pixs, dirout, rootname, i, baa, naa);
+		findSkew(pixs, angle, conf, score);
+		pix_deskew = pixDeskew(pixs, 0);
+
+		pixt = pixConvertTo1(pix_deskew, 150);
+		pixt1 = pixReduceRankBinary2(pixt, 2, NULL);
+		if (!pixt1) printf("pixt1 is null\n");
+
+
+
+		findWords(pixt1, dirout, rootname, i, baa, naa);
+
+
+		pixDestroy(&pixs);
 	}
 
+	pixDestroy(&pixt);
+	pixDestroy(&pix_deskew);
+	pixDestroy(&pixt1);
 	pixDestroy(&pixs);
 	boxaaDestroy(&baa);
 	numaaDestroy(&naa);
