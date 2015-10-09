@@ -158,6 +158,9 @@ int main() {
 
 
 		pixDestroy(&pixs);
+		pixDestroy(&pix_deskew);
+		pixDestroy(&pixt);
+		pixDestroy(&pixt1);
 	}
 
 	pixDestroy(&pixt);
