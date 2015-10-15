@@ -18,9 +18,6 @@
     <ClCompile Include="main-skew.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main-segmentation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main-line-removal.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -37,6 +34,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main-pagesegtest1.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main-segmentation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

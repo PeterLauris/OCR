@@ -112,7 +112,7 @@ void findSkew(PIX *pixs, l_float32 &angle, l_float32 &conf, l_float32 &score) {
 	conf, angle, score);*/
 }
 
-int main() {
+int main2() {
 	char        *dirin, *dirout, *rootname, *fname;
 
 	PIX *pixs, *pixt, *pixt1, *pix_deskew;
@@ -149,23 +149,44 @@ int main() {
 		pix_deskew = pixDeskew(pixs, 0);
 
 		pixt = pixConvertTo1(pix_deskew, 150);
-		pixt1 = pixReduceRankBinary2(pixt, 2, NULL);
-		if (!pixt1) printf("pixt1 is null\n");
+		//pixt1 = pixReduceRankBinary2(pixt, 2, NULL); //samazina att?lu (pa?trina procesu, bet p?c tam v?rdus neatrod tik labi)
+		//if (!pixt1) printf("pixt1 is null\n");
+
+		
+
+		/*pixGetDimensions(pixt, &w, &h, &d);
+		scalefact = (l_float32)(tilewidth - 2 * border) / (l_float32)w;
+		if (d == 1 && outdepth > 1 && scalefact < 1.0)
+			pixt = pixScaleToGray(pixt, scalefact);
+		else
+			pixt = pixScale(pixt, scalefact, scalefact);
+
+		if (outdepth == 1)
+			pixt = pixConvertTo1(pixt, 128);
+		else if (outdepth == 8)
+			pixt = pixConvertTo8(pixt, FALSE);
+		else  // outdepth == 32 
+			pixt = pixConvertTo32(pixt);
+		pixDestroy(&pixt);
+
+		if (border)
+			pixt = pixAddBorder(pixt, border, bordval);
+		else
+			pixt = pixClone(pixt);*/
 
 
-
-		findWords(pixt1, dirout, rootname, i, baa, naa);
+		findWords(pixt, dirout, rootname, i, baa, naa);
 
 
 		pixDestroy(&pixs);
 		pixDestroy(&pix_deskew);
 		pixDestroy(&pixt);
-		pixDestroy(&pixt1);
+		//pixDestroy(&pixt1);
 	}
 
 	pixDestroy(&pixt);
 	pixDestroy(&pix_deskew);
-	pixDestroy(&pixt1);
+	//pixDestroy(&pixt1);
 	pixDestroy(&pixs);
 	boxaaDestroy(&baa);
 	numaaDestroy(&naa);
