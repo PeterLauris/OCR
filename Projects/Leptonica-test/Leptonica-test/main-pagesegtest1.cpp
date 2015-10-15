@@ -24,7 +24,7 @@
 
 //izk?rto lapas vien? liel? bild?
 
-int main(int    argc,
+int main_pagesegtest1(int    argc,
 	char **argv)
 {
 	PIX         *pixs, *pixhm, *pixtm, *pixtb, *pixd;
