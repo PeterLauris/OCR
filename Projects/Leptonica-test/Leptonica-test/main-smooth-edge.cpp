@@ -57,7 +57,7 @@ int main_smooth_edge(int    argc,
 }
 
 
-void PixAddEdgeData(PIXA    *pixa,
+/*void PixAddEdgeData(PIXA    *pixa,
 	PIX     *pixs,
 	l_int32  side,
 	l_int32  minjump,
@@ -71,10 +71,10 @@ void PixAddEdgeData(PIXA    *pixa,
 	fprintf(stderr, "side = %d: jpl = %6.3f, jspl = %6.3f, rpl = %6.3f\n",
 		side, jpl, jspl, rpl);
 	pixt1 = pixRead("junkedge.png");
-	pixt2 = pixAddBorder(pixt1, 10, 0);  /* 10 pixel white border */
+	pixt2 = pixAddBorder(pixt1, 10, 0);
 	pixaAddPix(pixa, pixt2, L_INSERT);
 	pixDestroy(&pixt1);
 	return;
-}
+}*/
 
 

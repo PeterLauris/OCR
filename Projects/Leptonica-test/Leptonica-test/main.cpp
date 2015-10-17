@@ -33,6 +33,17 @@ static const l_int32  MAX_WORD_HEIGHT = 100;
 
 #define L_BUF_SIZE   512
 
+#define MIN_JUMP  2
+#define MIN_REVERSAL 3
+
+#define  GAMMA		 1 //no enhancement
+#define  MINVAL      50
+#define  MAXVAL      200
+#define  CONTRAST_FACTOR 0.1
+
+#define UNSHARP_HALF_WIDTH 5 //1, 2, ...
+#define UNSHARP_FRACT 0.4 //0.2 < fract < 0.7
+
 l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  format)
 {
 	return 0;
@@ -206,30 +217,55 @@ PIX * normalizeLighting(PIX *pixs) {
 	light_pixDisplayWriteFormat(pixc, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixg);
 
-	/* Generate the output image */
-	/*pixa = pixaReadFiles("\\tmp", "junk_write_display");
-	pixd = pixaDisplayTiledAndScaled(pixa, 8, 350, 4, 0, 25, 2);
-	pixWrite("tmp\\adapt.png", pixd, IFF_PNG);
-	pixDisplayWithTitle(pixd, 100, 100, NULL, 1);
-	pixDestroy(&pixd);*/
-
 	pixDestroy(&pixsg);
 	pixDestroy(&pixsm);
 
 	return pixc;
 }
 
+PIX * removeNoise(PIX *pixs) {
+	pixGammaTRC(pixs, pixs, GAMMA, MINVAL, MAXVAL);
+
+	pixContrastTRC(pixs, pixs, CONTRAST_FACTOR);
+
+	/*PIX *pix_old = pixs;
+	pixs = pixUnsharpMaskingGray(pixs, UNSHARP_HALF_WIDTH, UNSHARP_FRACT);
+	//pixDestroy(&pix_old);
+
+	pix_old = pixs;
+	pixs = pixBlockconv(pixs, 100, 100);*/
+	//pixDestroy(&pix_old);
+
+	return pixs;
+}
+
+void PixAddEdgeData(PIXA    *pixa, PIX     *pixs, l_int32  side, l_int32  minjump, l_int32  minreversal)
+{
+	l_float32  jpl, jspl, rpl;
+	PIX       *pixt1, *pixt2;
+
+	pixMeasureEdgeSmoothness(pixs, side, minjump, minreversal, &jpl,
+		&jspl, &rpl, "junkedge.png");
+	fprintf(stderr, "side = %d: jpl = %6.3f, jspl = %6.3f, rpl = %6.3f\n",
+		side, jpl, jspl, rpl);
+	pixt1 = pixRead("junkedge.png");
+	pixt2 = pixAddBorder(pixt1, 10, 0);  /* 10 pixel white border */
+	pixaAddPix(pixa, pixt2, L_INSERT);
+	pixDestroy(&pixt1);
+	return;
+}
+
 int main() {
 	char *dirin, *dirout, *rootname, *fname;
 
-	PIX *pixs, *pixt, *pix_deskew, *pix_light;
+	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_noise;
 
 	l_int32 firstpage = 0;
 	l_int32 npages = 0;
 
 
-	dirin = "C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\test-set";
-	dirout = "C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\result";
+	dirin = "..\\..\\..\\images\\test-set";
+	dirout = "..\\..\\..\\images\\result";
 	rootname = "result_";
 
 	/* Compute the word bounding boxes at 2x reduction, along with
@@ -243,7 +279,7 @@ int main() {
 
 	printf("Begin image processing\n");
 
-	for (l_int32 i = 0; i < nfiles; i++) {
+	for (l_int32 i = 4; i < 6; i++) {
 		fname = sarrayGetString(safiles, i, 0);
 		if ((pixs = pixRead(fname)) == NULL) {
 			printf("image file %s not read\n", fname);
@@ -257,6 +293,7 @@ int main() {
 
 
 		pix_light = normalizeLighting(pix_deskew);
+		removeNoise(pix_light);
 
 		pixt = pixConvertTo1(pix_light, 150);
 		
@@ -265,6 +302,7 @@ int main() {
 
 		pixDestroy(&pixt);
 		pixDestroy(&pix_light);
+		//pixDestroy(&pix_noise);
 		pixDestroy(&pix_deskew);
 		pixDestroy(&pixs);
 	}
@@ -272,6 +310,7 @@ int main() {
 	pixDestroy(&pixt);
 	pixDestroy(&pix_deskew);
 	pixDestroy(&pix_light);
+	//pixDestroy(&pix_noise);
 	pixDestroy(&pixs);
 	boxaaDestroy(&baa);
 	numaaDestroy(&naa);
