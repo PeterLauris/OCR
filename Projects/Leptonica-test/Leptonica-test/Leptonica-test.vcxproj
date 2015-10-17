@@ -159,7 +159,7 @@
     <ClCompile Include="main-find-pattern.cpp" />
     <ClCompile Include="main-find-pattern-2.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="main_lighting.cpp" />
+    <ClCompile Include="main_lightening.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

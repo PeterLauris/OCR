@@ -31,6 +31,67 @@ static const l_int32  MAX_WORD_HEIGHT = 100;
 #define   SEARCH_REDUCTION      2      /* 1, 2, 4 or 8 */
 #define   SEARCH_MIN_DELTA      0.01   /* degrees */
 
+#define L_BUF_SIZE   512
+
+l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  format)
+{
+	return 0;
+	char            buffer[L_BUF_SIZE];
+	l_int32         ignore;
+	l_float32       scale;
+	PIX            *pixt, *pix8;
+	static l_int32  index = 0;  /* caution: not .so or thread safe */
+
+	if (reduction == 0) return 0;
+
+	if (reduction < 0) {
+		index = 0;  /* reset; this will cause erasure at next call to write */
+		return 0;
+	}
+
+	if (format != IFF_JFIF_JPEG && format != IFF_PNG)
+		printf("ERROR: invalid format\n");
+	if (!pixs)
+		printf("ERROR: pixs not defined\n");
+
+	if (index == 0) {
+		snprintf(buffer, L_BUF_SIZE,
+			"del /f tmp\\junk_write_display.*.png tmp\\junk_write_display.*.jpg");
+		//printf("test\n");
+		ignore = system(buffer);
+	}
+	index++;
+
+	if (reduction == 1)
+		pixt = pixClone(pixs);
+	else {
+		scale = 1. / (l_float32)reduction;
+		if (pixGetDepth(pixs) == 1)
+			pixt = pixScaleToGray(pixs, scale);
+		else
+			pixt = pixScale(pixs, scale, scale);
+	}
+
+	if (pixGetDepth(pixt) == 16) {
+		pix8 = pixMaxDynamicRange(pixt, L_LOG_SCALE);
+		snprintf(buffer, L_BUF_SIZE, "tmp\\junk_write_display.%03d.png", index);
+		pixWrite(buffer, pix8, IFF_PNG);
+		pixDestroy(&pix8);
+	}
+	else if (pixGetDepth(pixt) < 8 || pixGetColormap(pixt) ||
+		format == IFF_PNG) {
+		snprintf(buffer, L_BUF_SIZE, "tmp\\junk_write_display.%03d.png", index);
+		pixWrite(buffer, pixt, IFF_PNG);
+	}
+	else {
+		snprintf(buffer, L_BUF_SIZE, "tmp\\junk_write_display.%03d.jpg", index);
+		if (pixt == NULL) printf("pixt is NULL");
+		pixWrite(buffer, pixt, format);
+	}
+	pixDestroy(&pixt);
+
+	return 0;
+}
 
 void findWords(PIX *pixt1, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, NUMAA *naa){
 	char         filename[BUF_SIZE];
@@ -81,13 +142,14 @@ void findWords(PIX *pixt1, char *dirout, char *rootname, l_int32 nr, BOXAA *baa,
 	fprintf(stderr, "filename: %s\n", filename);
 	targetPath[0] = '\0';
 	sprintf_s(targetPath, "%s%s%s", dirout, "\\", filename);
-	printf("file path: %s", targetPath);
-	pixWrite(targetPath, pixd, IFF_JFIF_JPEG);
+	printf("file path: %s\n", targetPath);
+	if (pixd == NULL) printf("pixd is NULL\n");
+	pixWrite(filename, pixd, IFF_PNG);
 	//free(targetPath);
 	pixDestroy(&pixt2);
 	pixDestroy(&pixd);
 	//getchar();
-#endif  /* RENDER	_PAGES */
+#endif  /* RENDER_PAGES */
 }
 
 void findSkew(PIX *pixs, l_float32 &angle, l_float32 &conf, l_float32 &score) {
@@ -112,16 +174,61 @@ void findSkew(PIX *pixs, l_float32 &angle, l_float32 &conf, l_float32 &score) {
 	conf, angle, score);*/
 }
 
-int main2() {
-	char        *dirin, *dirout, *rootname, *fname;
+PIX * normalizeLighting(PIX *pixs) {
+	l_int32      d;
+	PIX         *pixc, *pixr, *pixg, *pixb, *pixsg, *pixsm, *pixd;
 
-	PIX *pixs, *pixt, *pixt1, *pix_deskew;
+	/* Normalize for uneven illumination on RGB image */
+	pixBackgroundNormRGBArraysMorph(pixs, NULL, 4, 5, 200, &pixr, &pixg, &pixb);
+	pixd = pixApplyInvBackgroundRGBMap(pixs, pixr, pixg, pixb, 4, 4);
+	light_pixDisplayWriteFormat(pixd, 2, IFF_JFIF_JPEG);
+	pixDestroy(&pixr);
+	pixDestroy(&pixg);
+	pixDestroy(&pixb);
+	pixDestroy(&pixd);
+
+	/* Convert the RGB image to grayscale. */
+	pixsg = pixConvertRGBToLuminance(pixs);
+	light_pixDisplayWriteFormat(pixsg, 2, IFF_JFIF_JPEG);
+
+	/* Remove the text in the fg. */
+	pixc = pixCloseGray(pixsg, 25, 25);
+	light_pixDisplayWriteFormat(pixc, 2, IFF_JFIF_JPEG);
+
+	/* Smooth the bg with a convolution. */
+	pixsm = pixBlockconv(pixc, 15, 15);
+	light_pixDisplayWriteFormat(pixsm, 2, IFF_JFIF_JPEG);
+	pixDestroy(&pixc);
+
+	/* Normalize for uneven illumination on gray image. */
+	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 4, 5, 200, &pixg);
+	pixc = pixApplyInvBackgroundGrayMap(pixsg, pixg, 4, 4);
+	light_pixDisplayWriteFormat(pixc, 2, IFF_JFIF_JPEG);
+	pixDestroy(&pixg);
+
+	/* Generate the output image */
+	/*pixa = pixaReadFiles("\\tmp", "junk_write_display");
+	pixd = pixaDisplayTiledAndScaled(pixa, 8, 350, 4, 0, 25, 2);
+	pixWrite("tmp\\adapt.png", pixd, IFF_PNG);
+	pixDisplayWithTitle(pixd, 100, 100, NULL, 1);
+	pixDestroy(&pixd);*/
+
+	pixDestroy(&pixsg);
+	pixDestroy(&pixsm);
+
+	return pixc;
+}
+
+int main() {
+	char *dirin, *dirout, *rootname, *fname;
+
+	PIX *pixs, *pixt, *pix_deskew, *pix_light;
 
 	l_int32 firstpage = 0;
 	l_int32 npages = 0;
 
 
-	dirin = "C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\sample-pages";
+	dirin = "C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\test-set";
 	dirout = "C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\result";
 	rootname = "result_";
 
@@ -148,60 +255,27 @@ int main2() {
 		findSkew(pixs, angle, conf, score);
 		pix_deskew = pixDeskew(pixs, 0);
 
-		pixt = pixConvertTo1(pix_deskew, 150);
-		//pixt1 = pixReduceRankBinary2(pixt, 2, NULL); //samazina att?lu (pa?trina procesu, bet p?c tam v?rdus neatrod tik labi)
-		//if (!pixt1) printf("pixt1 is null\n");
 
+		pix_light = normalizeLighting(pix_deskew);
+
+		pixt = pixConvertTo1(pix_light, 150);
 		
-
-		/*pixGetDimensions(pixt, &w, &h, &d);
-		scalefact = (l_float32)(tilewidth - 2 * border) / (l_float32)w;
-		if (d == 1 && outdepth > 1 && scalefact < 1.0)
-			pixt = pixScaleToGray(pixt, scalefact);
-		else
-			pixt = pixScale(pixt, scalefact, scalefact);
-
-		if (outdepth == 1)
-			pixt = pixConvertTo1(pixt, 128);
-		else if (outdepth == 8)
-			pixt = pixConvertTo8(pixt, FALSE);
-		else  // outdepth == 32 
-			pixt = pixConvertTo32(pixt);
-		pixDestroy(&pixt);
-
-		if (border)
-			pixt = pixAddBorder(pixt, border, bordval);
-		else
-			pixt = pixClone(pixt);*/
-
-
 		findWords(pixt, dirout, rootname, i, baa, naa);
 
 
-		pixDestroy(&pixs);
-		pixDestroy(&pix_deskew);
 		pixDestroy(&pixt);
-		//pixDestroy(&pixt1);
+		pixDestroy(&pix_light);
+		pixDestroy(&pix_deskew);
+		pixDestroy(&pixs);
 	}
 
 	pixDestroy(&pixt);
 	pixDestroy(&pix_deskew);
-	//pixDestroy(&pixt1);
+	pixDestroy(&pix_light);
 	pixDestroy(&pixs);
 	boxaaDestroy(&baa);
 	numaaDestroy(&naa);
 	sarrayDestroy(&safiles);
-
-	//apstr?d? att?lu
-	//skew
-	//line removal
-	//...
-
-
-	//att?l? samekl? tekstu
-
-	//izveido tekstu failu
-
 
 	printf("\n---\nEND\n");
 	getchar();
