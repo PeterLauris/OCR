@@ -44,6 +44,28 @@ static const l_int32  MAX_WORD_HEIGHT = 100;
 #define UNSHARP_HALF_WIDTH 5 //1, 2, ...
 #define UNSHARP_FRACT 0.4 //0.2 < fract < 0.7
 
+#define DARK_THRESH_LIGHT 0
+#define LIGHT_THRESH_LIGHT 155
+#define DARK_THRESH_DARK 100
+#define LIGHT_THRESH_DARK 255
+#define DIFF_THRESH 0
+#define FACTOR 4
+
+l_int32 getLightingBGval(PIX *pixs) {
+	l_float32 lightPixFract, lightColorFract;
+	l_float32 darkPixFract, darkColorFract;
+	pixColorFraction(pixs, DARK_THRESH_LIGHT, LIGHT_THRESH_LIGHT, DIFF_THRESH, FACTOR, &lightPixFract, &lightColorFract);
+	pixColorFraction(pixs, DARK_THRESH_DARK, LIGHT_THRESH_DARK, DIFF_THRESH, FACTOR, &darkPixFract, &darkColorFract);
+	if (lightPixFract > darkPixFract) { //bilde ir tumša
+		printf("return 200\n");
+		return 200;
+	}
+	else { //bilde ir gaiša
+		printf("return 170");
+		return 170;
+	}
+}
+
 l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  format)
 {
 	return 0;
@@ -190,8 +212,8 @@ PIX * normalizeLighting(PIX *pixs) {
 	PIX         *pixc, *pixr, *pixg, *pixb, *pixsg, *pixsm, *pixd;
 
 	/* Normalize for uneven illumination on RGB image */
-	pixBackgroundNormRGBArraysMorph(pixs, NULL, 4, 5, 200, &pixr, &pixg, &pixb);
-	pixd = pixApplyInvBackgroundRGBMap(pixs, pixr, pixg, pixb, 4, 4);
+	pixBackgroundNormRGBArraysMorph(pixs, NULL, 8, 5, getLightingBGval(pixs), &pixr, &pixg, &pixb);
+	pixd = pixApplyInvBackgroundRGBMap(pixs, pixr, pixg, pixb, 8, 8);
 	light_pixDisplayWriteFormat(pixd, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixr);
 	pixDestroy(&pixg);
@@ -212,8 +234,8 @@ PIX * normalizeLighting(PIX *pixs) {
 	pixDestroy(&pixc);
 
 	/* Normalize for uneven illumination on gray image. */
-	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 4, 5, 200, &pixg);
-	pixc = pixApplyInvBackgroundGrayMap(pixsg, pixg, 4, 4);
+	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 8, 5, getLightingBGval(pixs), &pixg);
+	pixc = pixApplyInvBackgroundGrayMap(pixsg, pixg, 8, 8);
 	light_pixDisplayWriteFormat(pixc, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixg);
 
@@ -239,7 +261,7 @@ PIX * removeNoise(PIX *pixs) {
 	return pixs;
 }
 
-void PixAddEdgeData(PIXA    *pixa, PIX     *pixs, l_int32  side, l_int32  minjump, l_int32  minreversal)
+void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal)
 {
 	l_float32  jpl, jspl, rpl;
 	PIX       *pixt1, *pixt2;
@@ -279,7 +301,7 @@ int main() {
 
 	printf("Begin image processing\n");
 
-	for (l_int32 i = 4; i < 6; i++) {
+	for (l_int32 i = 1; i < 3; i++) {
 		fname = sarrayGetString(safiles, i, 0);
 		if ((pixs = pixRead(fname)) == NULL) {
 			printf("image file %s not read\n", fname);

@@ -149,6 +149,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="main-brightnesstest.cpp" />
+    <ClCompile Include="main-scaling.cpp" />
     <ClCompile Include="main-smooth-edge.cpp" />
     <ClCompile Include="main-pagesegtest1.cpp" />
     <ClCompile Include="main-skew.cpp" />
@@ -159,7 +161,7 @@
     <ClCompile Include="main-find-pattern.cpp" />
     <ClCompile Include="main-find-pattern-2.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="main_lightening.cpp" />
+    <ClCompile Include="main-lightening.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

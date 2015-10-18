@@ -45,7 +45,13 @@
     <ClCompile Include="main-smooth-edge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="main_lightening.cpp">
+    <ClCompile Include="main-scaling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main-lightening.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main-brightnesstest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
