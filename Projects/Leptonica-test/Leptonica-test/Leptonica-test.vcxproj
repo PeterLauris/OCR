@@ -157,7 +157,7 @@
     <ClCompile Include="segmentation.cpp" />
     <ClCompile Include="line-removal.cpp" />
     <ClCompile Include="word-finding.cpp" />
-    <ClCompile Include="word-finding-2.cpp" />
+    <ClCompile Include="jbwords.cpp" />
     <ClCompile Include="find-pattern.cpp" />
     <ClCompile Include="find-pattern-2.cpp" />
     <ClCompile Include="main.cpp" />

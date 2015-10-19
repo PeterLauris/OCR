@@ -5,10 +5,10 @@
 
 static const l_int32  MIN_WORD_WIDTH = 6;
 static const l_int32  MIN_WORD_HEIGHT = 4;
-static const l_int32  MAX_WORD_WIDTH = 500;
-static const l_int32  MAX_WORD_HEIGHT = 100;
+static const l_int32  MAX_WORD_WIDTH = 1000;
+static const l_int32  MAX_WORD_HEIGHT = 93;
 
-#define   BUF_SIZE                  512
+#define   BUF_SIZE                  1024
 
 /* select additional debug output */
 #define   RENDER_PAGES              1
@@ -37,11 +37,11 @@ static const l_int32  MAX_WORD_HEIGHT = 100;
 #define MIN_REVERSAL 3
 
 #define  GAMMA		 1 //no enhancement
-#define  MINVAL      50
-#define  MAXVAL      200
-#define  CONTRAST_FACTOR 0.1
+#define  MINVAL      100
+#define  MAXVAL      155
+#define  CONTRAST_FACTOR 0.15
 
-#define UNSHARP_HALF_WIDTH 5 //1, 2, ...
+#define UNSHARP_HALF_WIDTH 20 //1, 2, ...
 #define UNSHARP_FRACT 0.4 //0.2 < fract < 0.7
 
 #define DARK_THRESH_LIGHT 0
@@ -169,16 +169,53 @@ PIX * removeNoise(PIX *pixs) {
 
 	pixContrastTRC(pixs, pixs, CONTRAST_FACTOR);
 
-	/*PIX *pix_old = pixs;
-	pixs = pixUnsharpMaskingGray(pixs, UNSHARP_HALF_WIDTH, UNSHARP_FRACT);
+	//pixEqualizeTRC(pixs, pixs, 0, 1);
+
+	pixs = pixUnsharpMaskingGray2D(pixs, 4, 0.4);
+
+	//PIX *pix_old = pixs;
+	//pixs = pixUnsharpMasking(pixs, UNSHARP_HALF_WIDTH, UNSHARP_FRACT);
 	//pixDestroy(&pix_old);
 
-	pix_old = pixs;
+	/*pix_old = pixs;
 	pixs = pixBlockconv(pixs, 100, 100);*/
 	//pixDestroy(&pix_old);
 
 	return pixs;
 }
+
+/*void testRemoveNoise(PIX *pixs) {
+	PIX *pix_gamma = NULL;
+	PIX *pix_contrast = NULL;
+	PIX *pix_unsharp = NULL;
+	PIX *pix_1bpp = NULL;
+	char filename[BUF_SIZE];
+	for (float gamma = 0.5; gamma < 1.5; gamma += 0.3) {
+		for (int minVal = 0; minVal < 125; minVal += 20) {
+			for (int maxVal = 255; maxVal > 130; maxVal -= 20) {
+				pix_gamma = pixGammaTRC(pix_gamma, pixs, gamma, minVal, maxVal);
+				for (float contrast = 0.1; contrast < 1; contrast += 0.2) {
+					pix_contrast = pixContrastTRC(pix_contrast, pix_gamma, contrast);
+					for (int halfwidth = 1; halfwidth < 3; halfwidth += 1) {
+						for (float fract = 0.1; fract < 1; fract += 0.2) {
+							pix_unsharp = pixUnsharpMaskingGray2D(pix_contrast, halfwidth, fract);
+							for (int i = 140; i < 170; i += 10) {
+								pix_1bpp = pixConvertTo1(pix_unsharp, i);
+
+								snprintf(filename, BUF_SIZE, "%s_%f_%d_%d_%f_%d_%f_%d.png", "../../../images/results/noise-test/NOISE", gamma, minVal, maxVal, contrast, halfwidth, fract, i);
+								pixWrite(filename, pix_1bpp, IFF_PNG);
+								pixDestroy(&pix_1bpp);
+							}
+							pixDestroy(&pix_unsharp);
+						}
+					}
+					pixDestroy(&pix_contrast);
+				}
+				pixDestroy(&pix_gamma);
+			}
+		}
+	}
+}*/
 
 void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal)
 {
@@ -310,37 +347,46 @@ void writeWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr) {
 	pixWrite(targetPath, pixs, IFF_PNG);
 }
 
-PIX * findWords2(PIX *pixs, JBDATA *data, JBCLASSER *classer) {
+void findWords2(char* dirin, char *dirout) {
 	char         filename[BUF_SIZE];
-	char        *dirin, *rootname, *fname;
+	char        *rootname, *fname;
 	l_int32      reduction, i, firstpage, npages, nfiles;
 	l_float32    thresh, weight;
+	JBDATA      *data;
+	JBCLASSER   *classer;
 	NUMA        *natl;
 	SARRAY      *safiles;
 	PIX         *pix;
 	PIXA        *pixa, *pixadb;
 
-	reduction = 1;
-	thresh = 0.8;
-	weight = 0.6;
-	rootname = "fw2_result_";
+	reduction = 1;// atoi(argv[2]);
+	thresh = 0.8;// atof(argv[3]);
+	weight = 0.6;// atof(argv[4]);
+	rootname = "result_";
+
+	firstpage = 0;
+	npages = 0;
 
 	classer = jbWordsInTextlines(dirin, reduction, MAX_WORD_WIDTH,
 		MAX_WORD_HEIGHT, thresh, weight,
 		&natl, firstpage, npages);
 
+	printf("pixa components: %d\n", pixaGetCount(classer->pixat));
+
 	/* Save and write out the result */
+	snprintf(filename, BUF_SIZE, "%s%s%s", dirout, "/", rootname);
 	data = jbDataSave(classer);
-	jbDataWrite(rootname, data);
+	jbDataWrite(filename, data);
 
 #if  RENDER_PAGES
 	/* Render the pages from the classifier data, and write to file.
 	* Use debugflag == FALSE to omit outlines of each component. */
 	pixa = jbDataRender(data, FALSE);
 	npages = pixaGetCount(pixa);
+	printf("npages: %d\n", npages);
 	for (i = 0; i < npages; i++) {
 		pix = pixaGetPix(pixa, i, L_CLONE);
-		snprintf(filename, BUF_SIZE, "%s.%05d", rootname, i);
+		snprintf(filename, BUF_SIZE, "%s%s%s.%05d.png", dirout, "/", rootname, i);
 		fprintf(stderr, "filename: %s\n", filename);
 		pixWrite(filename, pix, IFF_PNG);
 		pixDestroy(&pix);
@@ -355,7 +401,7 @@ PIX * findWords2(PIX *pixs, JBDATA *data, JBCLASSER *classer) {
 	npages = pixaGetCount(pixadb);
 	for (i = 0; i < npages; i++) {
 		pix = pixaGetPix(pixadb, i, L_CLONE);
-		snprintf(filename, BUF_SIZE, "%s.db.%05d", rootname, i);
+		snprintf(filename, BUF_SIZE, "%s%s%s.db.%05d.png", dirout, "/", rootname, i);
 		fprintf(stderr, "filename: %s\n", filename);
 		pixWrite(filename, pix, IFF_PNG);
 		pixDestroy(&pix);
@@ -369,15 +415,20 @@ PIX * findWords2(PIX *pixs, JBDATA *data, JBCLASSER *classer) {
 }
 
 int main() {
-	char *dirin, *dirout, *rootname, *fname;
+	char *dirin, *dirout_1bpp, *dirout_words, *dirout, *rootname, *fname;
 
 	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_images, *pix_words;
+
+	JBDATA *jbdata;
+	JBCLASSER *classer;
 
 	l_int32 firstpage = 0;
 	l_int32 npages = 0;
 
 
 	dirin = "../../../images/test-set";
+	dirout_1bpp = "../../../images/results/1bpp";
+	dirout_words = "../../../images/results/words";
 	dirout = "../../../images/results";
 	rootname = "result_";
 
@@ -394,6 +445,9 @@ int main() {
 
 	//l_int32 w, h;
 	//l_float32 deg2rad = 3.1415926535 / 180.;
+	//pixGetDimensions(pixs, &w, &h, NULL);
+	//pixFindSkew(pix_tmp, &angle, &conf);
+	//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
 
 	for (l_int32 i = 0; i < nfiles; i++) {
 		printf("--- %d ---\n", i);
@@ -406,18 +460,19 @@ int main() {
 		l_float32 angle, conf, score;
 		pix_deskew = pixDeskew(pixs, 0);
 
-		//pixGetDimensions(pixs, &w, &h, NULL);
-		//pixFindSkew(pix_tmp, &angle, &conf);
-		//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
-
-
 		pix_light = normalizeLighting(pix_deskew);
 		removeNoise(pix_light);
 
 		pixt = pixConvertTo1(pix_light, 150);
+
+		//create a 1bpp image in the corresponding location
+		char filename[BUF_SIZE];
+		snprintf(filename, BUF_SIZE, "%s%s%s.%05d.png", dirout_1bpp, "/", rootname, i);
+		pixWrite(filename, pixt, IFF_PNG);
 		
 		pix_words = findWords(pixt, baa, naa);
-		writeWords(pix_words, dirout, rootname, i);
+		writeWords(pix_words, dirout_words, rootname, i);
+
 
 		pixDestroy(&pixt);
 		pixDestroy(&pix_light);
@@ -435,6 +490,8 @@ int main() {
 	boxaaDestroy(&baa);
 	numaaDestroy(&naa);
 	sarrayDestroy(&safiles);
+
+	findWords2(dirout_1bpp, dirout);
 
 	printf("\n---\nEND\n");
 	getchar();
