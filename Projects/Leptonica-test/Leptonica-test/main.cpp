@@ -50,20 +50,18 @@ static const l_int32  MAX_WORD_HEIGHT = 100;
 #define LIGHT_THRESH_DARK 255
 #define DIFF_THRESH 0
 #define FACTOR 4
+#define BGVAL_MIDDLE 186
+#define BGVAL_DELTA 30
 
 l_int32 getLightingBGval(PIX *pixs) {
 	l_float32 lightPixFract, lightColorFract;
 	l_float32 darkPixFract, darkColorFract;
 	pixColorFraction(pixs, DARK_THRESH_LIGHT, LIGHT_THRESH_LIGHT, DIFF_THRESH, FACTOR, &lightPixFract, &lightColorFract);
 	pixColorFraction(pixs, DARK_THRESH_DARK, LIGHT_THRESH_DARK, DIFF_THRESH, FACTOR, &darkPixFract, &darkColorFract);
-	if (lightPixFract > darkPixFract) { //bilde ir tumša
-		printf("return 200\n");
-		return 200;
-	}
-	else { //bilde ir gaiša
-		printf("return 170");
-		return 170;
-	}
+
+	l_float32 pixFractDiff = lightPixFract - darkPixFract;
+	printf("BGVAL: %d\n", (l_int32)(BGVAL_MIDDLE + pixFractDiff * BGVAL_DELTA));
+	return (l_int32)(BGVAL_MIDDLE + pixFractDiff * BGVAL_DELTA);
 }
 
 l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  format)
@@ -126,93 +124,14 @@ l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  form
 	return 0;
 }
 
-void findWords(PIX *pixt1, char *dirout, char *rootname, l_int32 nr, BOXAA *baa, NUMAA *naa){
-	char         filename[BUF_SIZE];
-	l_int32      i, j, w, h, ncomp;
-	l_int32      index, ival, rval, gval, bval;
-	BOX         *box;
-	BOXA        *boxa;
-	JBDATA      *data;
-	JBCLASSER   *classer;
-	NUMA        *nai;
-	PIX         *pixt2, *pixd;
-	PIXCMAP     *cmap;
-
-	char targetPath[1024];
-
-
-	pixGetWordBoxesInTextlines(pixt1, 1, MIN_WORD_WIDTH, MIN_WORD_HEIGHT,
-		MAX_WORD_WIDTH, MAX_WORD_HEIGHT,
-		&boxa, &nai);
-	boxaaAddBoxa(baa, boxa, L_INSERT);
-	numaaAddNuma(naa, nai, L_INSERT);
-
-#if  RENDER_PAGES
-	/* Show the results on a 2x reduced image, where each
-	* word is outlined and the color of the box depends on the
-	* computed textline. */
-	pixGetDimensions(pixt1, &w, &h, NULL);
-	pixd = pixCreate(w, h, 8);
-	printf("%d, %d\n", w, h);
-	//if ((pixCreateHeader(w, h, 8)) == NULL) printf("pixd not made\n");
-	if (!pixd) printf("pix not defined\n");
-	cmap = pixcmapCreateRandom(8, 1, 1);  /* first color is black */
-	pixSetColormap(pixd, cmap);
-
-	pixt2 = pixUnpackBinary(pixt1, 8, 1);
-	pixRasterop(pixd, 0, 0, w, h, PIX_SRC | PIX_DST, pixt2, 0, 0);
-	ncomp = boxaGetCount(boxa);
-	for (j = 0; j < ncomp; j++) {
-		box = boxaGetBox(boxa, j, L_CLONE);
-		numaGetIValue(nai, j, &ival);
-		index = 1 + (ival % 254);  /* omit black and white */
-		pixcmapGetColor(cmap, index, &rval, &gval, &bval);
-		pixRenderBoxArb(pixd, box, 2, rval, gval, bval);
-		boxDestroy(&box);
-	}
-
-	snprintf(filename, BUF_SIZE, "%s.%05d.png", rootname, nr);
-	fprintf(stderr, "filename: %s\n", filename);
-	targetPath[0] = '\0';
-	sprintf_s(targetPath, "%s%s%s", dirout, "\\", filename);
-	printf("file path: %s\n", targetPath);
-	if (pixd == NULL) printf("pixd is NULL\n");
-	pixWrite(filename, pixd, IFF_PNG);
-	//free(targetPath);
-	pixDestroy(&pixt2);
-	pixDestroy(&pixd);
-	//getchar();
-#endif  /* RENDER_PAGES */
-}
-
-void findSkew(PIX *pixs, l_float32 &angle, l_float32 &conf, l_float32 &score) {
-	//pixFindSkew(pixs, &angle, &conf);
-
-	pixFindSkewSweepAndSearchScorePivot(pixs, &angle, &conf, &score,
-		SWEEP_REDUCTION2, SEARCH_REDUCTION,
-		0.0, SWEEP_RANGE2, SWEEP_DELTA2,
-		SEARCH_MIN_DELTA,
-		L_SHEAR_ABOUT_CORNER);
-	fprintf(stderr, "pixFind...Pivot(about corner):\n"
-		"  conf = %5.3f, angle = %7.3f degrees, score = %f\n",
-		conf, angle, score);
-
-	/*pixFindSkewSweepAndSearchScorePivot(pix_deskew, &angle, &conf, &score,
-	SWEEP_REDUCTION2, SEARCH_REDUCTION,
-	0.0, SWEEP_RANGE2, SWEEP_DELTA2,
-	SEARCH_MIN_DELTA,
-	L_SHEAR_ABOUT_CENTER);
-	fprintf(stderr, "pixFind...Pivot(about center):\n"
-	"  conf = %5.3f, angle = %7.3f degrees, score = %f\n",
-	conf, angle, score);*/
-}
-
 PIX * normalizeLighting(PIX *pixs) {
 	l_int32      d;
 	PIX         *pixc, *pixr, *pixg, *pixb, *pixsg, *pixsm, *pixd;
 
+	l_int32 bgval = getLightingBGval(pixs);
+
 	/* Normalize for uneven illumination on RGB image */
-	pixBackgroundNormRGBArraysMorph(pixs, NULL, 8, 5, getLightingBGval(pixs), &pixr, &pixg, &pixb);
+	pixBackgroundNormRGBArraysMorph(pixs, NULL, 8, 5, bgval, &pixr, &pixg, &pixb);
 	pixd = pixApplyInvBackgroundRGBMap(pixs, pixr, pixg, pixb, 8, 8);
 	light_pixDisplayWriteFormat(pixd, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixr);
@@ -234,7 +153,7 @@ PIX * normalizeLighting(PIX *pixs) {
 	pixDestroy(&pixc);
 
 	/* Normalize for uneven illumination on gray image. */
-	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 8, 5, getLightingBGval(pixs), &pixg);
+	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 8, 5, bgval, &pixg);
 	pixc = pixApplyInvBackgroundGrayMap(pixsg, pixg, 8, 8);
 	light_pixDisplayWriteFormat(pixc, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixg);
@@ -277,17 +196,189 @@ void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int3
 	return;
 }
 
+//is not used / not working correctly?
+//pixs needs to be 1bpp
+PIX * removeImages(PIX *pixs) {
+	char         buf[256];
+	l_int32      index, zero;
+	PIX         *pixr;   /* image reduced to 150 ppi */
+	PIX         *pixhs;  /* image of halftone seed, 150 ppi */
+	PIX         *pixm;   /* image of mask of components, 150 ppi */
+	PIX         *pixhm1; /* image of halftone mask, 150 ppi */
+	PIX         *pixht;  /* image of halftone components, 150 ppi */
+	PIX         *pixnht; /* image without halftone components, 150 ppi */
+	PIX         *pixt1, *pixt2;
+
+	pixt1 = pixScaleToGray2(pixs);
+
+	if (pixt1 == NULL) printf("pix is NULL\n");
+	//pixWrite("tmp/orig.gray.150.png", pixt1, IFF_PNG);
+	pixDestroy(&pixt1);
+	pixr = pixReduceRankBinaryCascade(pixs, 1, 0, 0, 0);
+
+	/* Get seed for halftone parts */
+	pixt1 = pixReduceRankBinaryCascade(pixr, 4, 4, 3, 0);
+	pixt2 = pixOpenBrick(NULL, pixt1, 5, 5);
+	pixhs = pixExpandBinaryPower2(pixt2, 8);
+	//pixWrite("tmp/htseed.150.png", pixhs, IFF_PNG);
+	pixDestroy(&pixt1);
+	pixDestroy(&pixt2);
+
+	/* Get mask for connected regions */
+	pixm = pixCloseSafeBrick(NULL, pixr, 4, 4);
+	//pixWrite("tmp/ccmask.150.png", pixm, IFF_PNG);
+
+	/* Fill seed into mask to get halftone mask */
+	pixhm1 = pixSeedfillBinary(NULL, pixhs, pixm, 4);
+	pixWrite("tmp/htmask.150.png", pixhm1, IFF_PNG);
+
+	// Extract halftone stuff 
+	pixht = pixAnd(NULL, pixhm1, pixr);
+	pixWrite("tmp/ht.150.png", pixht, IFF_PNG);
+
+	// Extract non-halftone stuff
+	pixnht = pixXor(NULL, pixht, pixr);
+	pixWrite("tmp/text.150_1.png", pixht, IFF_PNG);
+	pixWrite("tmp/text.150_2.png", pixr, IFF_PNG);
+	pixWrite("tmp/text.150_0.png", pixs, IFF_PNG);
+	pixWrite("tmp/text.150.png", pixnht, IFF_PNG);
+	pixZero(pixht, &zero);
+
+	pixDestroy(&pixr);
+	pixDestroy(&pixhs);
+	pixDestroy(&pixm);
+	pixDestroy(&pixhm1);
+	pixDestroy(&pixht);
+
+	return pixnht;
+}
+
+PIX * findWords(PIX *pixt1, BOXAA *baa, NUMAA *naa){
+	l_int32      i, j, w, h, ncomp;
+	l_int32      index, ival, rval, gval, bval;
+	BOX         *box;
+	BOXA        *boxa;
+	JBDATA      *data;
+	JBCLASSER   *classer;
+	NUMA        *nai;
+	PIX         *pixt2, *pixd;
+	PIXCMAP     *cmap;
+
+
+	pixGetWordBoxesInTextlines(pixt1, 1, MIN_WORD_WIDTH, MIN_WORD_HEIGHT,
+		MAX_WORD_WIDTH, MAX_WORD_HEIGHT,
+		&boxa, &nai);
+	boxaaAddBoxa(baa, boxa, L_INSERT);
+	numaaAddNuma(naa, nai, L_INSERT);
+
+	/* Show the results on a 2x reduced image, where each
+	* word is outlined and the color of the box depends on the
+	* computed textline. */
+	pixGetDimensions(pixt1, &w, &h, NULL);
+	pixd = pixCreate(w, h, 8);
+	printf("%d, %d\n", w, h);
+	//if ((pixCreateHeader(w, h, 8)) == NULL) printf("pixd not made\n");
+	if (!pixd) printf("pix not defined\n");
+	cmap = pixcmapCreateRandom(8, 1, 1);  /* first color is black */
+	pixSetColormap(pixd, cmap);
+
+	pixt2 = pixUnpackBinary(pixt1, 8, 1);
+	pixRasterop(pixd, 0, 0, w, h, PIX_SRC | PIX_DST, pixt2, 0, 0);
+	ncomp = boxaGetCount(boxa);
+	for (j = 0; j < ncomp; j++) {
+		box = boxaGetBox(boxa, j, L_CLONE);
+		numaGetIValue(nai, j, &ival);
+		index = 1 + (ival % 254);  /* omit black and white */
+		pixcmapGetColor(cmap, index, &rval, &gval, &bval);
+		pixRenderBoxArb(pixd, box, 2, rval, gval, bval);
+		boxDestroy(&box);
+	}
+
+	pixDestroy(&pixt2);
+	return pixd;
+}
+
+void writeWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr) {
+	char filename[BUF_SIZE];
+	char targetPath[1024];
+	snprintf(filename, BUF_SIZE, "%s.%05d.png", rootname, nr);
+	fprintf(stderr, "filename: %s\n", filename);
+	targetPath[0] = '\0';
+	sprintf_s(targetPath, "%s%s%s", dirout, "/", filename);
+	printf("file path: %s\n", targetPath);
+	if (pixs == NULL) printf("pixd is NULL\n");
+	pixWrite(targetPath, pixs, IFF_PNG);
+}
+
+PIX * findWords2(PIX *pixs, JBDATA *data, JBCLASSER *classer) {
+	char         filename[BUF_SIZE];
+	char        *dirin, *rootname, *fname;
+	l_int32      reduction, i, firstpage, npages, nfiles;
+	l_float32    thresh, weight;
+	NUMA        *natl;
+	SARRAY      *safiles;
+	PIX         *pix;
+	PIXA        *pixa, *pixadb;
+
+	reduction = 1;
+	thresh = 0.8;
+	weight = 0.6;
+	rootname = "fw2_result_";
+
+	classer = jbWordsInTextlines(dirin, reduction, MAX_WORD_WIDTH,
+		MAX_WORD_HEIGHT, thresh, weight,
+		&natl, firstpage, npages);
+
+	/* Save and write out the result */
+	data = jbDataSave(classer);
+	jbDataWrite(rootname, data);
+
+#if  RENDER_PAGES
+	/* Render the pages from the classifier data, and write to file.
+	* Use debugflag == FALSE to omit outlines of each component. */
+	pixa = jbDataRender(data, FALSE);
+	npages = pixaGetCount(pixa);
+	for (i = 0; i < npages; i++) {
+		pix = pixaGetPix(pixa, i, L_CLONE);
+		snprintf(filename, BUF_SIZE, "%s.%05d", rootname, i);
+		fprintf(stderr, "filename: %s\n", filename);
+		pixWrite(filename, pix, IFF_PNG);
+		pixDestroy(&pix);
+	}
+	pixaDestroy(&pixa);
+#endif  /* RENDER_PAGES */
+
+#if  RENDER_DEBUG
+	/* Use debugflag == TRUE to see outlines of each component. */
+	pixadb = jbDataRender(data, TRUE);
+	/* Write the debug pages out */
+	npages = pixaGetCount(pixadb);
+	for (i = 0; i < npages; i++) {
+		pix = pixaGetPix(pixadb, i, L_CLONE);
+		snprintf(filename, BUF_SIZE, "%s.db.%05d", rootname, i);
+		fprintf(stderr, "filename: %s\n", filename);
+		pixWrite(filename, pix, IFF_PNG);
+		pixDestroy(&pix);
+	}
+	pixaDestroy(&pixadb);
+#endif  /* RENDER_DEBUG */
+
+	jbClasserDestroy(&classer);
+	jbDataDestroy(&data);
+	numaDestroy(&natl);
+}
+
 int main() {
 	char *dirin, *dirout, *rootname, *fname;
 
-	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_noise;
+	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_images, *pix_words;
 
 	l_int32 firstpage = 0;
 	l_int32 npages = 0;
 
 
-	dirin = "..\\..\\..\\images\\test-set";
-	dirout = "..\\..\\..\\images\\result";
+	dirin = "../../../images/test-set";
+	dirout = "../../../images/results";
 	rootname = "result_";
 
 	/* Compute the word bounding boxes at 2x reduction, along with
@@ -301,17 +392,23 @@ int main() {
 
 	printf("Begin image processing\n");
 
-	for (l_int32 i = 1; i < 3; i++) {
+	//l_int32 w, h;
+	//l_float32 deg2rad = 3.1415926535 / 180.;
+
+	for (l_int32 i = 0; i < nfiles; i++) {
+		printf("--- %d ---\n", i);
 		fname = sarrayGetString(safiles, i, 0);
 		if ((pixs = pixRead(fname)) == NULL) {
 			printf("image file %s not read\n", fname);
 			continue;
 		}
 
-		l_float32    angle, conf, score;
-
-		findSkew(pixs, angle, conf, score);
+		l_float32 angle, conf, score;
 		pix_deskew = pixDeskew(pixs, 0);
+
+		//pixGetDimensions(pixs, &w, &h, NULL);
+		//pixFindSkew(pix_tmp, &angle, &conf);
+		//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
 
 
 		pix_light = normalizeLighting(pix_deskew);
@@ -319,20 +416,21 @@ int main() {
 
 		pixt = pixConvertTo1(pix_light, 150);
 		
-		findWords(pixt, dirout, rootname, i, baa, naa);
-
+		pix_words = findWords(pixt, baa, naa);
+		writeWords(pix_words, dirout, rootname, i);
 
 		pixDestroy(&pixt);
 		pixDestroy(&pix_light);
-		//pixDestroy(&pix_noise);
 		pixDestroy(&pix_deskew);
+		pixDestroy(&pix_words);
 		pixDestroy(&pixs);
+		printf("\n\n", i);
 	}
 
 	pixDestroy(&pixt);
 	pixDestroy(&pix_deskew);
 	pixDestroy(&pix_light);
-	//pixDestroy(&pix_noise);
+	pixDestroy(&pix_words);
 	pixDestroy(&pixs);
 	boxaaDestroy(&baa);
 	numaaDestroy(&naa);
