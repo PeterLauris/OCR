@@ -2,19 +2,18 @@
 #include <stdlib.h>
 #include <string>
 
+#define MIN_WORD_WIDTH			6
+#define MIN_WORD_HEIGHT			4
+#define MAX_WORD_WIDTH			800
+#define MAX_WORD_HEIGHT			93
 
-static const l_int32  MIN_WORD_WIDTH = 6;
-static const l_int32  MIN_WORD_HEIGHT = 4;
-static const l_int32  MAX_WORD_WIDTH = 1000;
-static const l_int32  MAX_WORD_HEIGHT = 93;
-
-#define   BUF_SIZE                  1024
+#define   BUF_SIZE				1024
 
 /* select additional debug output */
-#define   RENDER_PAGES              1
-#define   RENDER_DEBUG              1
+#define   RENDER_PAGES          1
+#define   RENDER_DEBUG			1
 
-#define   BINARY_THRESHOLD			130
+#define   BINARY_THRESHOLD		130
 
 
 #define   DESKEW_REDUCTION      2      /* 1, 2 or 4 */
@@ -31,27 +30,27 @@ static const l_int32  MAX_WORD_HEIGHT = 93;
 #define   SEARCH_REDUCTION      2      /* 1, 2, 4 or 8 */
 #define   SEARCH_MIN_DELTA      0.01   /* degrees */
 
-#define L_BUF_SIZE   512
+#define L_BUF_SIZE				512
 
-#define MIN_JUMP  2
-#define MIN_REVERSAL 3
+#define MIN_JUMP				2
+#define MIN_REVERSAL			3
 
-#define  GAMMA		 1 //no enhancement
-#define  MINVAL      100
-#define  MAXVAL      155
-#define  CONTRAST_FACTOR 0.15
+#define  GAMMA					1 //no enhancement
+#define  MINVAL					50
+#define  MAXVAL					200
+#define  CONTRAST_FACTOR		0.1
 
-#define UNSHARP_HALF_WIDTH 20 //1, 2, ...
-#define UNSHARP_FRACT 0.4 //0.2 < fract < 0.7
+#define UNSHARP_HALF_WIDTH		20 //1, 2, ...
+#define UNSHARP_FRACT			0.4 //0.2 < fract < 0.7
 
-#define DARK_THRESH_LIGHT 0
-#define LIGHT_THRESH_LIGHT 155
-#define DARK_THRESH_DARK 100
-#define LIGHT_THRESH_DARK 255
-#define DIFF_THRESH 0
-#define FACTOR 4
-#define BGVAL_MIDDLE 186
-#define BGVAL_DELTA 30
+#define DARK_THRESH_LIGHT		0
+#define LIGHT_THRESH_LIGHT		155
+#define DARK_THRESH_DARK		100
+#define LIGHT_THRESH_DARK		255
+#define DIFF_THRESH				0
+#define FACTOR					4
+#define BGVAL_MIDDLE			186
+#define BGVAL_DELTA				30
 
 l_int32 getLightingBGval(PIX *pixs) {
 	l_float32 lightPixFract, lightColorFract;
@@ -171,7 +170,7 @@ PIX * removeNoise(PIX *pixs) {
 
 	//pixEqualizeTRC(pixs, pixs, 0, 1);
 
-	pixs = pixUnsharpMaskingGray2D(pixs, 4, 0.4);
+	PIX *pix_new = pixUnsharpMaskingGray2D(pixs, 2, 0.1);
 
 	//PIX *pix_old = pixs;
 	//pixs = pixUnsharpMasking(pixs, UNSHARP_HALF_WIDTH, UNSHARP_FRACT);
@@ -181,7 +180,7 @@ PIX * removeNoise(PIX *pixs) {
 	pixs = pixBlockconv(pixs, 100, 100);*/
 	//pixDestroy(&pix_old);
 
-	return pixs;
+	return pix_new;
 }
 
 /*void testRemoveNoise(PIX *pixs) {
@@ -417,7 +416,7 @@ void findWords2(char* dirin, char *dirout) {
 int main() {
 	char *dirin, *dirout_1bpp, *dirout_words, *dirout, *rootname, *fname;
 
-	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_images, *pix_words;
+	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_noise, *pix_words;
 
 	JBDATA *jbdata;
 	JBCLASSER *classer;
@@ -461,9 +460,9 @@ int main() {
 		pix_deskew = pixDeskew(pixs, 0);
 
 		pix_light = normalizeLighting(pix_deskew);
-		removeNoise(pix_light);
+		pix_noise = removeNoise(pix_light);
 
-		pixt = pixConvertTo1(pix_light, 150);
+		pixt = pixConvertTo1(pix_noise, 150);
 
 		//create a 1bpp image in the corresponding location
 		char filename[BUF_SIZE];
@@ -476,6 +475,7 @@ int main() {
 
 		pixDestroy(&pixt);
 		pixDestroy(&pix_light);
+		pixDestroy(&pix_noise);
 		pixDestroy(&pix_deskew);
 		pixDestroy(&pix_words);
 		pixDestroy(&pixs);
@@ -485,6 +485,7 @@ int main() {
 	pixDestroy(&pixt);
 	pixDestroy(&pix_deskew);
 	pixDestroy(&pix_light);
+	pixDestroy(&pix_noise);
 	pixDestroy(&pix_words);
 	pixDestroy(&pixs);
 	boxaaDestroy(&baa);
