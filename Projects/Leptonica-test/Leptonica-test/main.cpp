@@ -43,6 +43,7 @@
 #define UNSHARP_HALF_WIDTH		20 //1, 2, ...
 #define UNSHARP_FRACT			0.4 //0.2 < fract < 0.7
 
+//main?gie att?la gaišuma noteikšanai
 #define DARK_THRESH_LIGHT		0
 #define LIGHT_THRESH_LIGHT		155
 #define DARK_THRESH_DARK		100
@@ -52,9 +53,10 @@
 #define BGVAL_MIDDLE			186
 #define BGVAL_DELTA				30
 
+// Att?la spilgtuma koeficienta ieguve (0-256)
 l_int32 getLightingBGval(PIX *pixs) {
-	l_float32 lightPixFract, lightColorFract;
-	l_float32 darkPixFract, darkColorFract;
+	l_float32 lightPixFract, darkPixFract; //fraction of pixels in intermediate brightness range that were considered for color content
+	l_float32 lightColorFract, darkColorFract; //fraction of pixels that meet the criterion for sufficient color
 	pixColorFraction(pixs, DARK_THRESH_LIGHT, LIGHT_THRESH_LIGHT, DIFF_THRESH, FACTOR, &lightPixFract, &lightColorFract);
 	pixColorFraction(pixs, DARK_THRESH_DARK, LIGHT_THRESH_DARK, DIFF_THRESH, FACTOR, &darkPixFract, &darkColorFract);
 
@@ -123,14 +125,14 @@ l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  form
 	return 0;
 }
 
-PIX * normalizeLighting(PIX *pixs) {
+PIX * normalizeLighting(PIX *pixs, l_int32 *lightingVal) {
 	l_int32      d;
 	PIX         *pixc, *pixr, *pixg, *pixb, *pixsg, *pixsm, *pixd;
 
-	l_int32 bgval = getLightingBGval(pixs);
+	*lightingVal = getLightingBGval(pixs);
 
 	/* Normalize for uneven illumination on RGB image */
-	pixBackgroundNormRGBArraysMorph(pixs, NULL, 8, 5, bgval, &pixr, &pixg, &pixb);
+	pixBackgroundNormRGBArraysMorph(pixs, NULL, 8, 5, *lightingVal, &pixr, &pixg, &pixb);
 	pixd = pixApplyInvBackgroundRGBMap(pixs, pixr, pixg, pixb, 8, 8);
 	light_pixDisplayWriteFormat(pixd, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixr);
@@ -152,7 +154,7 @@ PIX * normalizeLighting(PIX *pixs) {
 	pixDestroy(&pixc);
 
 	/* Normalize for uneven illumination on gray image. */
-	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 8, 5, bgval, &pixg);
+	pixBackgroundNormGrayArrayMorph(pixsg, NULL, 8, 5, *lightingVal, &pixg);
 	pixc = pixApplyInvBackgroundGrayMap(pixsg, pixg, 8, 8);
 	light_pixDisplayWriteFormat(pixc, 2, IFF_JFIF_JPEG);
 	pixDestroy(&pixg);
@@ -163,7 +165,7 @@ PIX * normalizeLighting(PIX *pixs) {
 	return pixc;
 }
 
-PIX * removeNoise(PIX *pixs) {
+PIX * removeNoise(PIX *pixs, l_int32 *lightingVal) {
 	pixGammaTRC(pixs, pixs, GAMMA, MINVAL, MAXVAL);
 
 	pixContrastTRC(pixs, pixs, CONTRAST_FACTOR);
@@ -424,7 +426,6 @@ int main() {
 	l_int32 firstpage = 0;
 	l_int32 npages = 0;
 
-
 	dirin = "../../../images/test-set";
 	dirout_1bpp = "../../../images/results/1bpp";
 	dirout_words = "../../../images/results/words";
@@ -448,7 +449,7 @@ int main() {
 	//pixFindSkew(pix_tmp, &angle, &conf);
 	//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
 
-	for (l_int32 i = 0; i < nfiles; i++) {
+	for (l_int32 i = 3; i < 5; i++) {
 		printf("--- %d ---\n", i);
 		fname = sarrayGetString(safiles, i, 0);
 		if ((pixs = pixRead(fname)) == NULL) {
@@ -457,10 +458,12 @@ int main() {
 		}
 
 		l_float32 angle, conf, score;
+		l_int32 lightingVal;
+
 		pix_deskew = pixDeskew(pixs, 0);
 
-		pix_light = normalizeLighting(pix_deskew);
-		pix_noise = removeNoise(pix_light);
+		pix_light = normalizeLighting(pix_deskew, &lightingVal);
+		pix_noise = removeNoise(pix_light, &lightingVal);
 
 		pixt = pixConvertTo1(pix_noise, 150);
 
@@ -492,7 +495,7 @@ int main() {
 	numaaDestroy(&naa);
 	sarrayDestroy(&safiles);
 
-	findWords2(dirout_1bpp, dirout);
+	//findWords2(dirout_1bpp, dirout);
 
 	printf("\n---\nEND\n");
 	getchar();
