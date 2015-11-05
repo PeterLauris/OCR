@@ -93,7 +93,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\peter\OneDrive\Projects\OCR\FANN\fann\src\include;C:\Users\peter\OneDrive\Projects\OCR\FANN\fann\lib\gtest-1.6.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\FANN\fann\src\include;..\..\..\FANN\fann\lib\gtest-1.6.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="sample.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\FANN\fann\VS2010\fannfloat\fannfloat.vcxproj">

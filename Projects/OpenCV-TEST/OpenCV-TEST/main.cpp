@@ -98,21 +98,11 @@ int main(int argc, const char** argv)
 			cout << "\n";
 		}
 
-		
-
-
-
-		
-
-
-
-
-
 
 
 
 		delete[] arr;
-			
+		
 		waitKey(0);
 
 		destroyWindow("MyWindow");

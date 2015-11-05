@@ -449,7 +449,7 @@ int main() {
 	//pixFindSkew(pix_tmp, &angle, &conf);
 	//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
 
-	for (l_int32 i = 3; i < 5; i++) {
+	for (l_int32 i = 0; i < nfiles; i++) {
 		printf("--- %d ---\n", i);
 		fname = sarrayGetString(safiles, i, 0);
 		if ((pixs = pixRead(fname)) == NULL) {
