@@ -93,13 +93,13 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\..\FANN\fann\src\include;..\..\..\FANN\fann\lib\gtest-1.6.0\include;$(OPENCV_DIR)\include;..\..\..\leptonica\include\leptonica;..\..\..\leptonica\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\FANN\fann\src\include;..\..\..\FANN\fann\lib\gtest-1.6.0\include;$(OPENCV_DIR)\include;..\..\..\leptonica\include\leptonica;..\..\..\leptonica\include;..\..\..\sqlite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OPENCV_DIR)\x86\vc12\lib;..\..\..\leptonica\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_ts300d.lib;opencv_world300d.lib;opencv_ts300.lib;opencv_world300.lib;liblept168.lib;liblept168d.lib;giflib416-static-mtdll.lib;libjpeg8c-static-mtdll.lib;libpng143-static-mtdll.lib;libtiff394-static-mtdll.lib;zlib125-static-mtdll.lib;liblept168-static-mtdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OPENCV_DIR)\x86\vc12\lib;..\..\..\leptonica\lib;..\..\..\sqlite;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_ts300d.lib;opencv_world300d.lib;opencv_ts300.lib;opencv_world300.lib;liblept168.lib;liblept168d.lib;giflib416-static-mtdll.lib;libjpeg8c-static-mtdll.lib;libpng143-static-mtdll.lib;libtiff394-static-mtdll.lib;zlib125-static-mtdll.lib;liblept168-static-mtdll.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
