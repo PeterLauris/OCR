@@ -159,12 +159,13 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dirent.h" />
+    <ClInclude Include="utf8.h" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\..\FANN\fann\VS2010\fannfloat\fannfloat.vcxproj">
       <Project>{2f0ec4b6-b3f8-4a05-a884-b935e82e1390}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="dirent.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

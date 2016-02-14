@@ -1,5 +1,7 @@
-#include <iostream>
+﻿#include <iostream>
 #include <fstream>
+#include <algorithm>
+#include <ctime>
 
 #include "opencv2\opencv.hpp"
 #include "opencv2\imgproc\imgproc.hpp"
@@ -11,8 +13,30 @@
 
 #include "dirent.h"
 
+#include "utf8.h"
+
+
+//#define SYMBOL_COUNT 96
+#define SYMBOL_COUNT 4
+//#define SYMBOL_COUNT 33
+
 using namespace cv;
 using namespace std;
+
+//const string SYMBOLS[SYMBOL_COUNT] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+//									   "A", "Ā", "B", "C", "Č", "D", "E", "Ē", "F", "G", "Ģ", "H", "I", "Ī", "J", "K", "Ķ", "L", "Ļ", "M", "N", "Ņ", "O", "P", "R", "S", "Š", "T", "U", "Ū", "V", "Z", "Ž",
+//									   "a", "ā", "b", "c", "č", "d", "e", "ē", "f", "g", "ģ", "h", "i", "ī", "j", "k", "ķ", "l", "ļ", "m", "n", "ņ", "o", "p", "r", "s", "š", "t", "u", "ū", "v", "z", "ž",
+//									   "Q", "q", "W", "w", "X", "x", "Y", "y",
+//									   ".", ",", "!", "?", "-", "€", "$", "(", ")", "@", "[", "]"
+//};
+
+const string SYMBOLS[SYMBOL_COUNT] = {
+	"A", "B", "C", "D"
+};
+
+//const string SYMBOLS[SYMBOL_COUNT] = {
+//"a", "ā", "b", "c", "č", "d", "e", "ē", "f", "g", "ģ", "h", "i", "ī", "j", "k", "ķ", "l", "ļ", "m", "n", "ņ", "o", "p", "r", "s", "š", "t", "u", "ū", "v", "z", "ž"
+//};
 
 void OCR() {
 	printf("Start OCR");
@@ -26,15 +50,24 @@ struct RecordInfo
 };
 
 
-char *dirLettersName = "../../../images/letter-spacing/narrow/invalid/";
+char *dirLettersName = "../../../images/letters/training-set/";
 char *dirSpacingName = "../../../images/letter-spacing/narrow/valid/";
 char *dirTestName = "../../../images/letter-spacing/narrow/test/";
-string dirLetters1bpp = "../../../images/letter-spacing/narrow/invalid/1bpp/";
-string dirSpacing1bpp = "../../../images/letter-spacing/narrow/valid/1bpp/";
+//string dirLetters1bpp = "../../../images/letters/1bpp/";
+//string dirSpacingLetters1bpp = "../../../images/letter-spacing/narrow/invalid/1bpp/";
+//string dirSpacing1bpp = "../../../images/letter-spacing/narrow/valid/1bpp/";
+
 string dirTest1bpp = "../../../images/letter-spacing/narrow/test/1bpp/";
+
+
+string dirLettersTrainingSpritemap = "../../../images/letters/training-set-spritesheet.png";
+string dirLettersTestSpritemap = "../../../images/letters/test-set-spritesheet.png";
+
 char *imgPath;
 
-RecordInfo *records = NULL;
+int recordsCount = 0;
+RecordInfo *trainingRecords = NULL;
+RecordInfo *testRecords = NULL;
 
 void prepareTrainingData() {
 	SARRAY *safiles = getSortedPathnamesInDirectory(dirLettersName, NULL, 0, 0);
@@ -73,7 +106,7 @@ void prepareTrainingData() {
 		}
 
 		//TODO error when	 converting to 1bpp
-		//pixt = pixConvertTo1(pixs, 150);
+		pixt = pixConvertTo1(pixs, 150);
 		sprintf_s(newName, "%s.%05d.png", "s", i);
 		sprintf_s(targetPath, "%s%s%s", dirSpacingName, "1bpp/", newName);
 		pixWrite(targetPath, pixs, IFF_PNG);
@@ -115,7 +148,7 @@ void prepareTestData() {
 	cout << "Created 1bpp images of spacing test images\n";
 }
 
-void createTrainingData() {
+/*void createTrainingData() {
 	cout << "Creating training data..." << endl;
 
 	ofstream fout("train_spacing.in");
@@ -125,13 +158,13 @@ void createTrainingData() {
 		int inputSize = 0;
 		string trainingDataContent = "";
 
-		DIR *dirLetters = opendir(dirLetters1bpp.c_str());
+		DIR *dirLetters = opendir(dirSpacingLetters1bpp??.c_str());
 		DIR *dirSpacing = opendir(dirSpacing1bpp.c_str());
 		string imgName;
 		struct dirent *ent;
 		if (dirLetters != NULL && dirSpacing != NULL) {
 			while ((ent = readdir(dirLetters)) != NULL) {
-				string imgPath(dirLetters1bpp + ent->d_name);
+				string imgPath(dirSpacingLetters1bpp?? + ent->d_name);
 				cout << imgPath << "\n";
 
 				Mat img = imread(imgPath);
@@ -200,9 +233,178 @@ void createTrainingData() {
 		fout << validFileCount << " " << inputSize << " " << 1 << "\n" << trainingDataContent;
 		fout.close();
 	}
+}*/
+
+string convertImageToString(Mat img) {
+	string trainingDataContent = "";
+	int inputSize = img.rows * img.cols;
+	int *arr = new int[inputSize];
+	for (int y = 0; y < img.rows; y++) {
+		for (int x = 0; x < img.cols; x++) {
+			Vec3b intensity = img.at<Vec3b>(y, x);
+			int t = (intensity[0] <= 128 ? 0 : 1);
+			arr[y*img.cols + x] = t;
+			trainingDataContent = trainingDataContent + to_string(t) + " ";
+			//cout << t << " ";
+		}
+		//cout << "\n";
+	}
+	delete[] arr;
+	//getchar();
+	return trainingDataContent;
 }
 
-void createTestData() {
+float randomFloat(float a, float b) {
+	float random = ((float)rand()) / (float)RAND_MAX;
+	float diff = b - a;
+	float r = random * diff;
+	return a + r;
+}
+
+void createNNData(int type = 0) {
+	string imgPath = "";
+
+	ofstream out;
+	if (type == 0) {
+		out.open("train_letters.in");
+		imgPath = dirLettersTrainingSpritemap.c_str();
+		cout << "Creating training data..." << endl;
+	}
+	else if (type == 1) {
+		out.open("test_letters.in");
+		imgPath = dirLettersTestSpritemap.c_str();
+		cout << "Creating test data..." << endl;
+	}
+	else {
+		cerr << "ERROR: Invalid type\n";
+		exit(1);
+	}
+
+	if (out.is_open()) {
+		int validFileCount = 0;
+		int inputSize = 1024; // 32*32
+		string dataContent = "";
+
+		cout << imgPath << "\n";
+
+		Mat img = imread(imgPath);
+		if (img.empty()) {
+			cout << "Cannot load " << imgPath << endl;
+			return;
+		}
+		//cvtColor(img, img, CV_BGR2GRAY);
+
+		RecordInfo* typeRecords;
+		if (type == 0) typeRecords = trainingRecords;
+		else if (type == 1) typeRecords = testRecords;
+		else {
+			exit(1);
+		}
+
+		int repCount = (type == 0) ? 30 : 1;
+
+
+		Point2f srcTri[3];
+		Point2f dstTri[3];
+		Mat rot_mat(2, 3, CV_32FC1);
+		Mat warp_mat(2, 3, CV_32FC1);
+		Mat warp_dst, warp_rotate_dst;
+
+
+		for (int i = 0; i < recordsCount; i++) {
+			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + 32), cv::Range(typeRecords[i].x, typeRecords[i].x + 32));
+			Mat subInvImg;
+			bitwise_not(subImg, subInvImg);
+			srcTri[0] = Point2f(0, 0);
+			srcTri[1] = Point2f(subImg.cols - 1, 0);
+			srcTri[2] = Point2f(0, subImg.rows - 1);
+
+			//cout << "Current letter: " << trainingRecords[i].letter << endl;
+
+			for (int rep = 0; rep < repCount; rep++) {
+				string resString = "";
+
+				if (rep > 0) { //pirmajā iterācijā oriģinālu nemaina
+					//randomly modify subImg
+					warp_dst = Mat::zeros(subInvImg.rows, subInvImg.cols, subInvImg.type());
+
+					dstTri[0] = Point2f(subInvImg.cols*randomFloat(0, 0.15f), subInvImg.rows*randomFloat(0, 0.15f));
+					dstTri[1] = Point2f(subInvImg.cols*randomFloat(0.85f, 1), subInvImg.rows*randomFloat(0, 0.15f));
+					dstTri[2] = Point2f(subInvImg.cols*randomFloat(0, 0.15f), subInvImg.rows*randomFloat(0.85f, 1));
+
+					warp_mat = getAffineTransform(srcTri, dstTri);
+
+					//warp_dst.setTo(255);
+					warpAffine(subInvImg, warp_dst, warp_mat, warp_dst.size());
+
+					bitwise_not(warp_dst, warp_dst);
+
+					//TODO vai vajag iztīrīt atmiņu??
+
+					/*namedWindow("WarpWindow", CV_WINDOW_AUTOSIZE);
+					imshow("WarpWindow", warp_dst);
+					waitKey(0);
+					destroyWindow("WarpWindow");*/
+
+					int erosion_type;
+					int erosion_elem = 0 + (rand() % (int)(2 - 0 + 1));
+					int erosion_size = (0 + (rand() % (int)(2 - 0 + 1)))/2; //66%, ka 0
+
+					Mat erosion_dst;
+					if (erosion_elem == 0) { erosion_type = MORPH_RECT; }
+					else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
+					else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
+
+					Mat element = getStructuringElement(erosion_type,
+						Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+						Point(erosion_size, erosion_size));
+
+					erode(warp_dst, erosion_dst, element);
+					//dilate pagaidām neizmantoju, jo burti pārāk vāji
+
+					/*namedWindow("ErodeWindow", CV_WINDOW_AUTOSIZE);
+					imshow("ErodeWindow", erosion_dst);
+					waitKey(0);
+					destroyWindow("ErodeWindow");*/
+
+					/// Apply the erosion operation
+					erode(warp_dst, erosion_dst, element);
+
+					resString = convertImageToString(erosion_dst);
+				}
+				else {
+					resString = convertImageToString(subImg);
+				}
+
+				dataContent += resString + "\n";
+				for (int j = 0; j < SYMBOL_COUNT; j++) {
+					if (typeRecords[i].letter == SYMBOLS[j]) {
+						dataContent += "1 ";
+					}
+					else {
+						dataContent += "-1 ";
+					}
+				}
+				dataContent += "\n";
+			}
+
+			/*namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
+			imshow("MyWindow", subImg);
+			waitKey(0);
+			destroyWindow("MyWindow");*/
+
+			subImg.release();
+		}
+
+
+		img.release();
+
+		out << (recordsCount*repCount) << " " << inputSize << " " << SYMBOL_COUNT << "\n" << dataContent;
+		out.close();
+	}
+}
+
+/*void createTestData() {
 	cout << "Creating test data..." << endl;
 
 	ofstream fout("test_spacing.in");
@@ -253,12 +455,12 @@ void createTestData() {
 			cout << "not present" << endl;
 		}
 
-		fout << validFileCount << " " << inputSize << " " << 1 << "\n" << trainingDataContent;
+		//fout << validFileCount << " " << inputSize << " " << 1 << "\n" << trainingDataContent;
 		fout.close();
 	}
-}
+}*/
 
-void trainNN() {
+void trainNN_spacing() {
 	const unsigned int num_input = 512;
 	const unsigned int num_output = 1;
 	const unsigned int num_layers = 15;
@@ -268,7 +470,7 @@ void trainNN() {
 	const unsigned int epochs_between_reports = 100;
 
 
-	unsigned int layers[4] = { num_input, 5, 6, 1 };
+	unsigned int layers[4] = { num_input, 6, 6, SYMBOL_COUNT };
 	struct fann *ann = fann_create_standard_array(4, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 
 
@@ -284,34 +486,112 @@ void trainNN() {
 	getchar();
 }
 
-void testNN() {
-	struct fann *ann = fann_create_from_file("result_spacing.net");
+void trainNN_letters() {
+	const unsigned int num_input = 1024;
+	const unsigned int num_layers = 5;
+	const unsigned int max_epochs = 500000;
+	const unsigned int epochs_between_reports = 100;
+	const float desired_error = 0.0009;//0.0015;
 
-	struct fann_train_data *data = fann_read_train_from_file("test_spacing.in");
-	fann_reset_MSE(ann);
-	fann_test_data(ann, data);
-	printf("Mean Square Error: %f\n", fann_get_MSE(ann));
-	fann_destroy_train(data);
+	cout << "Training..." << endl;
+
+	unsigned int layers[num_layers] = { num_input, 4, 5, 4, SYMBOL_COUNT };
+	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
+	fann_randomize_weights(ann, -0.2, 0.2);
+
+	fann_set_activation_function_hidden(ann, FANN_ELLIOT_SYMMETRIC);
+	fann_set_activation_function_output(ann, FANN_ELLIOT_SYMMETRIC);
+
+	fann_train_on_file(ann, "train_letters.in", max_epochs, epochs_between_reports, desired_error);
+
+	fann_save(ann, "result_letters.net");
+
+	fann_destroy(ann);
+
+	getchar();
 }
 
-void readDataset() {
-	ifstream in("../../../images/letter_spritesheet.txt");
-	ofstream out("../../../images/test_result.txt");
+void testNN() {
+	cout << "Testing..." << endl;
+	struct fann *ann = fann_create_from_file("result_letters.net");
+
+	//struct fann_train_data *data = fann_read_train_from_file("test_letters.in");
+	//fann_reset_MSE(ann);
+	//fann_test_data(ann, data);
+	//printf("Mean Square Error: %f\n", fann_get_MSE(ann));
+	//fann_destroy_train(data);
+
+	fann_type calc_out[4];
+	fann_type input[1024];
+	fann_type expected_out[SYMBOL_COUNT];
+
+	ifstream in("test_letters.in");
+	string word;
+	in >> word;
+	int sampleCount = stoi(word);
+	in >> word; //1024
+	int inputCount = stoi(word);
+	in >> word;
+	int outputCount = stoi(word);
+
+	for (int i = 0; i < sampleCount; i++) {
+		for (int j = 0; j < inputCount; j++) {
+			in >> word;
+			input[j] = stoi(word);
+		}
+		for (int j = 0; j < outputCount; j++) {
+			in >> word;
+			expected_out[j] = stoi(word);
+		}
+		fann_type* tmp = fann_run(ann, input);
+		tmp = fann_run(ann, input);
+		tmp = fann_run(ann, input);
+		tmp = fann_run(ann, input);
+		tmp = fann_run(ann, input);
+		for (int k = 0; k < 4; k++) {
+			calc_out[k] = tmp[k];
+		}
+		bool result = fann_test(ann, input, expected_out);
+		cout << "Input " << i << ":\n"; //  << " (" << (result ? "TRUE" : "FALSE")
+		for (int j = 0; j < outputCount; j++) {
+			cout << SYMBOLS[j] << ": " << calc_out[j] << " \t" << expected_out[j] << "\n";
+		}
+		cout << "\n---------\n";
+		//cin >> word;
+	}
+	in.close();
+}
+
+//Nolasa spritesheet
+void readDataset(int type = 0) {
+	ifstream in;
+	if (type == 0) {
+		in.open("../../../images/letters/training-set-spritesheet.txt");
+		cout << "Create training dataset" << endl;
+	}
+	else if (type == 1) {
+		in.open("../../../images/letters/test-set-spritesheet.txt");
+		cout << "Create test dataset" << endl;
+	}
+	else {
+		cerr << "ERROR: Invalid type\n";
+		exit(1);
+	}
 
 	if (in.is_open()) {
-		printf("File opened successfully\n");
-
-
+		//tiek noskaidrots rindiņu skaits
 		int lineCount = 0;
 		string line;
 		while (getline(in, line)) lineCount++;
-		cout << lineCount << endl;
+		//cout << lineCount << endl;
 
-		records = new RecordInfo[lineCount];
+		RecordInfo* typeRecords;
+
+		recordsCount = lineCount;
+		typeRecords = new RecordInfo[lineCount];
 
 		in.clear();
 		in.seekg(0, ios::beg);
-
 
 		bool readingCoords = false;
 		bool readingLetter = false;
@@ -321,62 +601,149 @@ void readDataset() {
 
 		while (in >> word) {
 			if (word == "=") {
-				if (readingCoords) {
-					readingCoords = false;
+				if (!readingCoords && !readingLetter) {
 					readingLetter = true;
-				}
-				else if (readingLetter) {
-					printf("Shouldn\'t be here...\n");
-				}
-				else {
-					readingCoords = true;
-					coordIdx = 0;
-					num++;
 				}
 			}
 			else {
 				if (readingCoords) {
+					if (coordIdx >= 4) {
+						readingCoords = false;
+						continue;
+					}
 					if (coordIdx == 0)
-						records[num].x = stoi(word);
+						typeRecords[num].x = stoi(word);
 					else if (coordIdx == 1)
-						records[num].y = stoi(word);
-					//cout << "Coord [" << coordIdx << "]: " << stoi(word) << " ";
+						typeRecords[num].y = stoi(word);
+					//cout << "Coord [" << coordIdx << "]: " << stoi(word) << "\n";
 					coordIdx++;
 				}
 				else if (readingLetter) {
-					records[num].letter = word;
+					num++;
+					typeRecords[num].letter = word;
 					//cout << "Letter : " << word << "\n";
 					readingLetter = false;
+					readingCoords = true;
+					coordIdx = 0;
 				}
 			}
 		}
 
-		for (int i = 0; i < lineCount; i++) {
-			cout << "(" << records[i].x << ";" << records[i].y << ") --> " << records[i].letter << endl;
-		}
+		if (type == 0) trainingRecords = typeRecords;
+		else if (type == 1) testRecords = typeRecords;
+
+		/*for (int i = 0; i < lineCount; i++) {
+			cout << "(" << trainingRecords[i].x << ";" << trainingRecords[i].y << ") --> " << trainingRecords[i].letter << endl;
+		}*/
 	}
 	else {
-		printf("Failed to open the file\n");
+		printf("Failed to open the data file\n");
 	}
-
-	out.close();
 	in.close();
+}
 
-	/*sqlite3 *db;
-	int rc = sqlite3_open("test.db", &db);
-	if (rc == SQLITE_OK) {
-		printf("Database opened successfully\n");
-	}
+//Pievieno spritesheet bildēm atbilstošos burtus
+void completeSpritesheet(int type = 0) {
+	cout << "Complete spritesheet" << endl;
+	string newString = "";
+	string word;
+
+	bool firstLine = true;
+
+	ifstream in;
+	
+	if (type == 0) in.open("../../../images/letters/training-set-spritesheet-original.txt");
+	else if (type == 1) in.open("../../../images/letters/test-set-spritesheet-original.txt");
 	else {
-		printf("Failed to open the database\n");
+		cerr << "ERROR: Invalid type\n";
+		exit(1);
 	}
-	sqlite3_close(db);*/
+
+	while (in >> word) {
+		//cout << word << " ";
+		int _count = count(word.begin(), word.end(), '_');
+		if (_count == 1) {
+			if (!firstLine)
+				newString.append("\r\n");
+			newString.append(word);
+			newString.append(" = ");
+
+			string letter = word.substr(0, word.find('_'));
+			int letterSize = utf8::distance(letter.begin(), letter.end());
+			if (letterSize == 1)
+				newString.append(letter);
+			else {
+				string tmp = letter.substr(0, letterSize / 2);
+				if (utf8::is_valid(tmp.begin(), tmp.end())) {
+					newString.append(tmp);
+				}
+				else {
+					newString.append(letter.substr(0,2));
+				}
+			}
+			
+			newString.append(" ");
+		}
+		else if (_count == 2) { //special characters
+			if (!firstLine)
+				newString.append("\r\n");
+			newString.append(word);
+
+			if (word.substr(1, 4) == "jaut") {
+				//cout << "Jautajuma zime!\n" << endl;
+				newString.append(" = ? ");
+			}
+			else if (word.substr(1, 4) == "kols") {
+				//cout << "Kols!\n" << endl;
+				newString.append(" = : ");
+			}
+			else if (word.substr(1, 4) == "pedi") {
+				//cout << "Pedinas!\n" << endl;
+				newString.append(" = \" ");
+			}
+			else if (word.substr(1, 4) == "punk") {
+				//cout << "Punkts!\n" << endl;
+				newString.append(" = . ");
+			}
+		}
+		else {
+			newString.append(word);
+			newString.append(" ");
+		}
+
+		firstLine = false;
+	}
+	in.close();
+	//cout << newString << endl;
+
+	ofstream out;
+	if (type == 0) out.open("../../../images/letters/training-set-spritesheet.txt", std::ios::out | std::ios::binary);
+	else if (type == 1) out.open("../../../images/letters/test-set-spritesheet.txt", std::ios::out | std::ios::binary);
+
+	out << newString;
+	out.close();
 }
 
+/// Izsauc nepieciešamās funkcijas OCR trenēšanai
+void trainOCR() {
+	completeSpritesheet();
+	readDataset();
+	createNNData();
+	trainNN_letters();
+
+	completeSpritesheet(1);
+	readDataset(1);
+	createNNData(1);
+	testNN();
+}
+
+/// Attīra programmas atmiņu
 void cleanup() {
-	delete[] records;
+	delete[] trainingRecords;
+	delete[] testRecords;
 }
 
+/// Izsauc cleanup funkciju pie loga aizvēršanas
 BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 {
 	switch (dwCtrlType) {
@@ -393,18 +760,9 @@ BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 }
 
 int main() {
-	//test FANN
-	//struct fann *ann = fann_create_standard(3, 1, 3, 1);
-	//fann_destroy(ann);
-
-	//test leptonica
-	//PIX *pixs;
-
-
-	//test opencv
-	//Mat img = imread("b&w.jpg", CV_LOAD_IMAGE_UNCHANGED);
-
 	BOOL ret = SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
+
+	srand(time(NULL));
 
 	char c;
 	do {
@@ -416,6 +774,8 @@ int main() {
 				"5 - train neural network\n" <<
 				"6 - test neural network\n" <<
 				"d - create dataset\n" <<
+				"s - complete spritemap\n" <<
+				"t - TRAIN\n" <<
 				"Make a choice: ";
 		cin >> c;
 		//c = '6';
@@ -429,19 +789,25 @@ int main() {
 			prepareTestData();
 			break;
 		case '3':
-			createTrainingData();
+			createNNData(0);
 			break;
 		case '4':
-			createTestData();
+			createNNData(1);
 			break;
 		case '5':
-			trainNN();
+			trainNN_letters();
 			break;
 		case '6':
 			testNN();
 			break;
 		case 'd':
 			readDataset();
+			break;
+		case 's':
+			completeSpritesheet();
+			break;
+		case 't':
+			trainOCR();
 			break;
 		default:
 			cleanup();
