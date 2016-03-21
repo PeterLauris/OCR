@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <ctime>
 
-//#include "image_processing.cpp"
+#include "image_processing.h"
 #include "neural_network.h"
 #include "utilities.h"
 
@@ -19,8 +19,10 @@ using namespace std;
 
 /// Attīra programmas atmiņu
 void cleanup() {
-	delete[] NeuralNetwork::trainingRecords;
-	delete[] NeuralNetwork::testRecords;
+	delete[] NeuralNetwork::trainingRecords_letters;
+	delete[] NeuralNetwork::trainingRecords_spacing;
+	delete[] NeuralNetwork::testRecords_letters;
+	delete[] NeuralNetwork::testRecords_spacing;
 }
 
 /// Izsauc cleanup funkciju pie loga aizvēršanas
@@ -39,17 +41,23 @@ BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 	return FALSE;
 }
 
-std::string* NeuralNetwork::SYMBOLS;
-char* NeuralNetwork::dirLettersName;
-char* NeuralNetwork::dirSpacingName;
-char* NeuralNetwork::dirTestName;
-std::string NeuralNetwork::dirTest1bpp;
-std::string NeuralNetwork::dirLettersTrainingSpritemap;
-std::string NeuralNetwork::dirLettersTestSpritemap;
-char* NeuralNetwork::imgPath;
-int NeuralNetwork::recordsCount;
-RecordInfo* NeuralNetwork::trainingRecords;
-RecordInfo* NeuralNetwork::testRecords;
+std::string* NeuralNetwork::SYMBOLS = new std::string[SYMBOL_COUNT]{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+std::string NeuralNetwork::dirLettersTrainingSet				=	"../../../images/learning/letters/training-set/";
+std::string NeuralNetwork::dirSpacingTrainingSet				=	"../../../images/learning/spacing/narrow/training-set/";
+std::string NeuralNetwork::dirSpacingTestSet					=	"../../../images/learning/spacing/narrow/test/1bpp/";
+
+std::string NeuralNetwork::dirLettersTrainingSpritemap			=	"../../../images/learning/letters/training-set-spritesheet.png";
+std::string NeuralNetwork::dirLettersTestSpritemap				=	"../../../images/learning/letters/test-set-spritesheet.png";
+std::string NeuralNetwork::dirSpacingTrainingSpritemap			=	"../../../images/learning/spacing/narrow/training-set-spritesheet.png";
+std::string NeuralNetwork::dirSpacingTestSpritemap				=	"../../../images/learning/spacing/narrow/test-set-spritesheet.png";
+//std::string NeuralNetwork::dirSpacingValidTrainingSpritemap;
+//std::string NeuralNetwork::dirSpacingInvalidTrainingSpritemap;
+
+int NeuralNetwork::recordsCount = 0;
+RecordInfo* NeuralNetwork::trainingRecords_letters;
+RecordInfo* NeuralNetwork::testRecords_letters;
+RecordInfo* NeuralNetwork::trainingRecords_spacing;
+RecordInfo* NeuralNetwork::testRecords_spacing;
 
 clock_t Utilities::startTime;
 
@@ -58,6 +66,10 @@ int main() {
 	BOOL ret = SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
 
 	srand(time(NULL));
+
+	/*for (int i = 0; i < 10; i++) {
+		cout << Utilities::randomInt(0, 9) << endl;
+	}*/
 
 	char c;
 	do {
@@ -78,35 +90,39 @@ int main() {
 
 		switch (c) {
 		case '1':
-
+			NeuralNetwork::trainOCR_spacing();
 			break;
 		case '2':
 			NeuralNetwork::prepareTrainingData();
 			NeuralNetwork::prepareTestData();
 			break;
 		case '3':
-			NeuralNetwork::createNNData(0);
+			NeuralNetwork::createNNData_letters(0);
 			break;
 		case '4':
-			NeuralNetwork::createNNData(1);
+			NeuralNetwork::createNNData_letters(1);
 			break;
 		case '5':
 			NeuralNetwork::trainNN_letters();
 			break;
 		case '6':
-			NeuralNetwork::testNN();
+			NeuralNetwork::testNN_letters();
 			break;
 		case 'd':
-			//NeuralNetwork::readDataset();
+			NeuralNetwork::readDataset_spacing(0);
 			break;
 		case 's':
-			//NeuralNetwork::completeSpritesheet();
+			NeuralNetwork::completeSpritesheet_letters ();
 			break;
 		case 'r':
-			NeuralNetwork::trainOCR();
+			NeuralNetwork::trainOCR_letters();
 			break;
 		case 't':
-			NeuralNetwork::trainOCR_quicker();
+			NeuralNetwork::trainOCR_letters_quicker();
+			break;
+		case 'i':
+			NeuralNetwork::trainOCR_spacing();
+			ImageProcessing::iterateOverImage();
 			break;
 		default:
 			cleanup();

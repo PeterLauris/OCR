@@ -163,6 +163,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dirent.h" />
+    <ClInclude Include="image_processing.h" />
     <ClInclude Include="neural_network.h" />
     <ClInclude Include="utf8.h" />
     <ClInclude Include="utilities.h" />
