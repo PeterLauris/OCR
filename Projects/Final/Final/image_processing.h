@@ -64,6 +64,22 @@
 #define BGVAL_MIDDLE			186
 #define BGVAL_DELTA				30
 
+
+struct SpacingGroup {
+public:
+	int startX;
+	int groupSize;
+
+	SpacingGroup(int s) {
+		startX = s;
+		groupSize = 1;
+	}
+
+	void Add() {
+		groupSize++;
+	}
+};
+
 class ImageProcessing {
 public:
 	static l_int32 getLightingBGval(PIX *pixs);

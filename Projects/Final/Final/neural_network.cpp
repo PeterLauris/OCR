@@ -182,11 +182,11 @@ void NeuralNetwork::completeSpritesheet_letters(int type) {
 void NeuralNetwork::readDataset_letters(int type = 0) {
 	ifstream in;
 	if (type == 0) {
-		in.open("../../../images/letters/training-set-spritesheet.txt");
+		in.open("../../../images/learning/letters/training-set-spritesheet.txt");
 		cout << "Create training dataset" << endl;
 	}
 	else if (type == 1) {
-		in.open("../../../images/letters/test-set-spritesheet.txt");
+		in.open("../../../images/learning/letters/test-set-spritesheet.txt");
 		cout << "Create test dataset" << endl;
 	}
 	else {
@@ -199,7 +199,7 @@ void NeuralNetwork::readDataset_letters(int type = 0) {
 		int lineCount = 0;
 		string line;
 		while (getline(in, line)) lineCount++;
-		//cout << lineCount << endl;
+		cout << lineCount << endl;
 
 		RecordInfo* typeRecords;
 
@@ -375,8 +375,7 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 			exit(1);
 		}
 
-		int repCount = (type == 0) ? TRANSFORMATION_COUNT : 10;
-
+		int repCount = (type == 0) ? TRANSFORMATION_COUNT_LETTER : 1;
 
 		Point2f srcTri[3];
 		Point2f dstTri[3];
@@ -384,9 +383,12 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 		Mat warp_mat(2, 3, CV_32FC1);
 		Mat warp_dst, warp_rotate_dst;
 
+		std::vector<std::vector<string> > sortingVector(SORTING_VECTOR_COUNT, std::vector<string>());
+
+		cout << "Records count: " << recordsCount << endl;
 
 		for (int i = 0; i < recordsCount; i++) {
-			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + 32), cv::Range(typeRecords[i].x, typeRecords[i].x + 32));
+			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + LETTER_HEIGHT), cv::Range(typeRecords[i].x, typeRecords[i].x + LETTER_WIDTH));
 			Mat subInvImg;
 			bitwise_not(subImg, subInvImg);
 			srcTri[0] = Point2f(0, 0);
@@ -402,9 +404,9 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 							   //randomly modify subImg
 					warp_dst = Mat::zeros(subInvImg.rows, subInvImg.cols, subInvImg.type());
 
-					dstTri[0] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT));
-					dstTri[1] = Point2f(subInvImg.cols*Utilities::randomFloat(1 - DEFORMATION_AMOUNT, 1), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT));
-					dstTri[2] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT), subInvImg.rows*Utilities::randomFloat(1 - DEFORMATION_AMOUNT, 1));
+					dstTri[0] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_LETTER), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_LETTER));
+					dstTri[1] = Point2f(subInvImg.cols*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_LETTER, 1), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_LETTER));
+					dstTri[2] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_LETTER), subInvImg.rows*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_LETTER, 1));
 					
 					warp_mat = getAffineTransform(srcTri, dstTri);
 
@@ -444,16 +446,18 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 					resString = Utilities::convertImageToString(subImg, true);
 				}
 
-				dataContent += resString + "\n";
+				resString += "\n";
 				for (int j = 0; j < SYMBOL_COUNT; j++) {
 					if (typeRecords[i].letter == SYMBOLS[j]) {
-						dataContent += "1 ";
+						resString += "1 ";
 					}
 					else {
-						dataContent += "-1 ";
+						resString += "-1 ";
 					}
 				}
-				dataContent += "\n";
+				resString += "\n";
+
+				sortingVector[Utilities::randomInt(0, SORTING_VECTOR_COUNT - 1)].push_back(resString);
 			}
 
 			/*namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
@@ -464,8 +468,14 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 			subImg.release();
 		}
 
-
 		img.release();
+
+		for (int i = 0; i < SORTING_VECTOR_COUNT; i++) {
+			while (!sortingVector[i].empty()) {
+				dataContent += sortingVector[i].back();
+				sortingVector[i].pop_back();
+			}
+		}
 
 		out << (recordsCount*repCount) << " " << inputSize << " " << SYMBOL_COUNT << "\n" << dataContent;
 		out.close();
@@ -493,7 +503,7 @@ void NeuralNetwork::createNNData_spacing(int type = 0) {
 
 	if (out.is_open()) {
 		int validFileCount = 0;
-		int inputSize = INPUT_SIZE_SPACING; // 16*32
+		int inputSize = INPUT_SIZE_SPACING; // 10*32
 		string dataContent = "";
 
 		cout << imgPath << "\n";
@@ -513,7 +523,7 @@ void NeuralNetwork::createNNData_spacing(int type = 0) {
 			exit(1);
 		}
 
-		int repCount = (type == 0) ? TRANSFORMATION_COUNT : 1;
+		int repCount = (type == 0) ? TRANSFORMATION_COUNT_SPACING : 1;
 
 		Point2f srcTri[3];
 		Point2f dstTri[3];
@@ -525,7 +535,7 @@ void NeuralNetwork::createNNData_spacing(int type = 0) {
 
 		for (int i = 0; i < recordsCount; i++) {
 			//cout << typeRecords[i].y << " " << typeRecords[i].x << endl;
-			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + 32), cv::Range(typeRecords[i].x, typeRecords[i].x + 16));
+			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + SPACING_HEIGHT), cv::Range(typeRecords[i].x, typeRecords[i].x + SPACING_WIDTH));
 			Mat subInvImg;
 			bitwise_not(subImg, subInvImg);
 			srcTri[0] = Point2f(0, 0);
@@ -547,9 +557,9 @@ void NeuralNetwork::createNNData_spacing(int type = 0) {
 							   //randomly modify subImg
 					warp_dst = Mat::zeros(subInvImg.rows, subInvImg.cols, subInvImg.type());
 
-					dstTri[0] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT));
-					dstTri[1] = Point2f(subInvImg.cols*Utilities::randomFloat(1 - DEFORMATION_AMOUNT, 1), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT));
-					dstTri[2] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT), subInvImg.rows*Utilities::randomFloat(1 - DEFORMATION_AMOUNT, 1));
+					dstTri[0] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING));
+					dstTri[1] = Point2f(subInvImg.cols*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_SPACING, 1), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING));
+					dstTri[2] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING), subInvImg.rows*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_SPACING, 1));
 
 					warp_mat = getAffineTransform(srcTri, dstTri);
 
@@ -615,17 +625,18 @@ void NeuralNetwork::createNNData_spacing(int type = 0) {
 void NeuralNetwork::trainNN_spacing() {
 	const unsigned int num_input = INPUT_SIZE_SPACING;
 	const unsigned int num_output = 1;
-	const unsigned int num_layers = 15;
-	const unsigned int num_neurons_hidden = 3;
-	const float desired_error = (const float) 0.0005;
+	const unsigned int num_layers = 4;
+	const float desired_error = (const float) 0.0001;
 	const unsigned int max_epochs = 500000;
 	const unsigned int epochs_between_reports = 100;
 
 
-	unsigned int layers[4] = { num_input, 10, 10, 1 };
-	struct fann *ann = fann_create_standard_array(4, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
+	unsigned int layers[num_layers] = { num_input, 4, 4, num_output };
+	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
+	fann_randomize_weights(ann, -0.3, 0.3);
 
-
+	//FANN_ELLIOT_SYMMETRIC
+	//FANN_SIGMOID_SYMMETRIC
 	fann_set_activation_function_hidden(ann, FANN_ELLIOT_SYMMETRIC);
 	fann_set_activation_function_output(ann, FANN_ELLIOT_SYMMETRIC);
 
@@ -640,14 +651,14 @@ void NeuralNetwork::trainNN_spacing() {
 
 void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_input = INPUT_SIZE_LETTERS;
-	const unsigned int num_layers = 6;
+	const unsigned int num_layers = 4;
 	const unsigned int max_epochs = 500000;
 	const unsigned int epochs_between_reports = 20;
-	const float desired_error = 0.0015;//0.0015;
+	const float desired_error = 0.0001;//0.0015;
 
 	cout << "Training..." << endl;
 
-	unsigned int layers[num_layers] = { num_input, 22, 50, 50, 22, SYMBOL_COUNT };
+	unsigned int layers[num_layers] = { num_input, 10, 10, SYMBOL_COUNT };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.3, 0.3);
 
@@ -789,8 +800,7 @@ void NeuralNetwork::testNN_spacing() {
 	in.close();
 }
 
-void NeuralNetwork::testNN_image_spacing(Mat img) {
-	cout << "Testing image spacing..." << endl;
+void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb) {
 	struct fann *ann = fann_create_from_file("result_spacing.net");
 	if (ann == NULL) {
 		cout << "ann IS NULL!!??" << endl;
@@ -801,7 +811,7 @@ void NeuralNetwork::testNN_image_spacing(Mat img) {
 	fann_type calc_out[1];
 	fann_type expected_out[1];
 
-	Size size(32, 16);
+	Size size(SPACING_WIDTH, SPACING_HEIGHT);
 	Mat resizedImg;
 	resize(img, resizedImg, size);
 
@@ -810,7 +820,8 @@ void NeuralNetwork::testNN_image_spacing(Mat img) {
 	int outputCount = 1;
 
 	string imgString = Utilities::convertImageToString(resizedImg, false);
-	cout << imgString << endl;
+	//cout << imgString << endl;
+
 	int correctCount = 0;
 	for (int j = 0; j < INPUT_SIZE_SPACING; j++) {
 		input[j] = imgString[j] - '0';
@@ -830,7 +841,61 @@ void NeuralNetwork::testNN_image_spacing(Mat img) {
 		}
 	}
 
-	cout << "Calculated result (is spacing): " << tmp[currentLargestIdx] << endl;
+	//cout << "Calculated result (is spacing): " << tmp[currentLargestIdx] << endl;
+
+	calcIdx = (tmp[currentLargestIdx] >= 0 ? 1 : 0);
+	calcProb = tmp[currentLargestIdx];
+}
+
+void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb) {
+	cout << "Testing image spacing..." << endl;
+	struct fann *ann = fann_create_from_file("result_letters.net");
+	if (ann == NULL) {
+		cout << "ann IS NULL!!??" << endl;
+		return;
+	}
+
+	fann_type input[INPUT_SIZE_LETTERS];
+	fann_type calc_out[SYMBOL_COUNT];
+	fann_type expected_out[SYMBOL_COUNT];
+
+	Size size(LETTER_WIDTH, LETTER_HEIGHT);
+	Mat resizedImg;
+	resize(img, resizedImg, size);
+
+	int sampleCount = 1;
+	int inputCount = INPUT_SIZE_LETTERS;
+	int outputCount = SYMBOL_COUNT;
+
+	string imgString = Utilities::convertImageToString(resizedImg, false);
+	cout << imgString << endl << imgString.length();
+
+	cout << "t" << endl;
+	int correctCount = 0;
+	for (int j = 0; j < inputCount; j++) {
+		input[j] = imgString[j] - '0';
+	}
+	for (int j = 0; j < outputCount; j++) {
+		expected_out[j] = 0; //UNKNOWN
+	}
+
+	cout << "t" << endl;
+
+	int currentLargestIdx = -1;
+	fann_type currentLargestValue = -1;
+	fann_type* tmp = fann_run(ann, input);
+	for (int k = 0; k < outputCount; k++) {
+		calc_out[k] = tmp[k];
+		if (calc_out[k] > currentLargestValue) {
+			currentLargestValue = calc_out[k];
+			currentLargestIdx = k;
+		}
+	}
+
+	cout << "Calculated result: " << SYMBOLS[currentLargestIdx] << " (" << currentLargestValue << ")" << endl;
+
+	calcIdx = currentLargestIdx;
+	calcProb = tmp[currentLargestIdx];
 }
 
 // Izsauc nepieciešam?s funkcijas OCR tren?šanai
@@ -840,10 +905,10 @@ void NeuralNetwork::trainOCR_letters() {
 	createNNData_letters();
 	trainNN_letters();
 
-	completeSpritesheet_letters(1);
+	/*completeSpritesheet_letters(1);
 	readDataset_letters(1);
 	createNNData_letters(1);
-	testNN_letters();
+	testNN_letters();*/
 }
 
 void NeuralNetwork::trainOCR_letters_quicker() {

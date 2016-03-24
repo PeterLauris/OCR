@@ -373,54 +373,177 @@ void ImageProcessing::findWords2(char* dirin, char *dirout) {
 	numaDestroy(&natl);
 }
 
+cv::Mat prepareImage(cv::Mat subImg) {
+	if (subImg.cols > subImg.rows) {
+		int diff = subImg.cols - subImg.rows;
+		int x1 = diff / 2;
+		int x2 = x1 + subImg.rows; //lai ir kvadr?ts
+		subImg = subImg(cv::Range(0, subImg.rows), cv::Range(x1, x2));
+
+		cout << "Image decreased!" << endl;
+		namedWindow("Decreased SubImg", CV_WINDOW_AUTOSIZE);
+		imshow("Decreased SubImg", subImg);
+		waitKey(0);
+		destroyWindow("Decreased SubImg");
+	}
+	else if (subImg.cols < subImg.rows) {
+		int diff = subImg.rows - subImg.cols;
+
+		cout << "Image increased!" << endl;
+
+
+		bitwise_not(subImg, subImg);
+		cv::Mat padded;
+		padded.create(subImg.rows, subImg.cols + diff, subImg.type()); //(diff+1)/2 nepieciešams, lai ar? nep?ra diff gad?jum? izveidotu kvadr?tu. p?ra gad?jum? tas neko nemaina
+		padded.setTo(cv::Scalar::all(0));
+		subImg.copyTo(padded(Rect(diff / 2, 0, subImg.cols, subImg.rows)));
+		subImg = padded;
+		bitwise_not(subImg, subImg);
+
+		//TODO memory leak?
+
+		/*namedWindow("Increased SubImg", CV_WINDOW_AUTOSIZE);
+		imshow("Increased SubImg", subImg);
+		waitKey(0);
+		destroyWindow("Increased SubImg");*/
+	}
+
+	return subImg;
+}
+
 void ImageProcessing::iterateOverImage() {
-	Mat source = imread("C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\iteration_test_2.png");
+	Mat source = imread("C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\test_digits_1.png");
 
 	int width = source.cols;
 	int height = source.rows;
 
-	int spacingIterationWidth = height / 8;
-	int spacingTestWidth = height / 2;
+	int spacingIterationWidth = height / 9;
+	int spacingTestWidth = height / 4;
 
-	int letterIterationWidth = height / 4;
+	int letterIterationWidth = height / 9;
 	int letterTestWidth = height;
 
 	//TODO nestandarta izm?ru apstr?de
+	std::vector<int> spacingCoordsFound;
+	int calcIdx;
+	double calcProb;
 
-	if (width >= height) {
-		//iter? p?ri source, lai atrastu atstarpes
-		int currX = 0;
-		while (currX + spacingTestWidth <= width) {
-			Mat subImg = source(cv::Range(0, height), cv::Range(currX, currX + spacingTestWidth));
 
-			NeuralNetwork::testNN_image_spacing(subImg);
+	// TODO test if (width >= height) {
+	//iter? p?ri source, lai atrastu atstarpes
+	int currX = 0;
+	while (currX + spacingTestWidth <= width) {
+		Mat subImg = source(cv::Range(0, height), cv::Range(currX, currX + spacingTestWidth));
 
-			namedWindow("Spacing SubImg", CV_WINDOW_AUTOSIZE);
-			imshow("Spacing SubImg", subImg);
-			waitKey(0);
-			destroyWindow("Spacing SubImg");
+		NeuralNetwork::testNN_image_spacing(subImg, calcIdx, calcProb);
 
-			currX += spacingIterationWidth;
+		//cout << calcIdx << " " << calcProb << endl;
+
+		if (calcIdx == 1 && calcProb > 0.9) { //ir atstarpe
+			spacingCoordsFound.push_back(currX);
 		}
 
+		/*namedWindow("Spacing SubImg", CV_WINDOW_AUTOSIZE);
+		imshow("Spacing SubImg", subImg);
+		waitKey(0);
+		destroyWindow("Spacing SubImg");*/
 
-		//currX = 0;
-		//while (currX + letterTestWidth <= width) {
-		//	Mat subImg = source(cv::Range(0, height), cv::Range(currX, currX + letterTestWidth));
-
-		//	namedWindow("Letter SubImg", CV_WINDOW_AUTOSIZE);
-		//	imshow("Letter SubImg", subImg);
-		//	waitKey(0);
-		//	destroyWindow("Letter SubImg");
-
-		//	//TODO p?rbauda, vai ir burts
-
-		//	currX += letterIterationWidth;
-		//}
+		currX += spacingIterationWidth;
 	}
-	else {
-		cout << "TODO\n";
+
+	cout << "Total spacing positions found: " << spacingCoordsFound.size() << endl;
+
+
+	if (spacingCoordsFound.size() == 0) {
+		cout << "TODO no spacing found (only a letter??)" << endl;
+		return;
 	}
+
+	std::vector<SpacingGroup*> spacingGroups;
+
+	spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[0]));
+
+	//apstr?d? atrast?s koordin?tas
+	for (int i = 1; i < spacingCoordsFound.size(); i++) {
+		SpacingGroup *lastSpacingGroup = spacingGroups.back();
+
+		if (spacingCoordsFound[i] == lastSpacingGroup->startX + lastSpacingGroup->groupSize * spacingIterationWidth) { //current spacing belongs to this group
+			lastSpacingGroup->Add();
+		}
+		else { //create a new spacing group
+			spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[i]));
+		}
+	}
+
+	cout << "Total spacing count: " << spacingCoordsFound.size() << "\nSpacing groups found: " << spacingGroups.size() << endl;
+
+	int validCount = 0;
+	for (int i = 0; i < spacingGroups.size(); i++) {
+		if (spacingGroups[i]->groupSize > 1) {
+			validCount++;
+		}
+	}
+	cout << "Valid spacing groups found: " << validCount << endl;
+
+	int prevGroupX = 0;
+	for (int i = 0; i < spacingGroups.size(); i++) {
+		if (spacingGroups[i]->groupSize > 1) { //spacing group is valid
+			int currGroupX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth) / 2.0;
+
+			if (spacingGroups[i]->startX > 0) { //ja grupa nav paš? v?rda s?kum?
+
+				Mat subImg = source(cv::Range(0, height), cv::Range(prevGroupX, currGroupX));
+				subImg = prepareImage(subImg);
+				//TODO memory leak?
+
+				NeuralNetwork::testNN_image_letter(subImg, calcIdx, calcProb);
+
+				namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
+				imshow("Coutout SubImg", subImg);
+				waitKey(0);
+				destroyWindow("Coutout SubImg");
+			}
+
+			prevGroupX = currGroupX;
+		}
+	}
+	//parbauda ar? p?d?jo simbolu, aiz kura nav atstarpe
+	Mat subImg = source(cv::Range(0, height), cv::Range(prevGroupX, source.cols));
+	subImg = prepareImage(subImg);
+	//TODO memory leak?
+
+	NeuralNetwork::testNN_image_letter(subImg, calcIdx, calcProb);
+
+	namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
+	imshow("Coutout SubImg", subImg);
+	waitKey(0);
+	destroyWindow("Coutout SubImg");
+
+
+	//clear memory
+	while (!spacingGroups.empty()) {
+		delete spacingGroups.back();
+		spacingGroups.pop_back();
+	}
+
+
+	//TODO iest cauri pa atstarp?m un atpaz?st burtus
+
+	/*currX = 0;
+	while (currX + letterTestWidth <= width) {
+		Mat subImg = source(cv::Range(0, height), cv::Range(currX, currX + letterTestWidth));
+
+		//NeuralNetwork::testNN_image_letter(subImg);
+
+		namedWindow("Letter SubImg", CV_WINDOW_AUTOSIZE);
+		imshow("Letter SubImg", subImg);
+		waitKey(0);
+		destroyWindow("Letter SubImg");
+
+		//TODO p?rbauda, vai ir burts
+
+		currX += letterIterationWidth;
+	}*/
 }
 
 int main2() {

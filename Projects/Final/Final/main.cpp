@@ -85,8 +85,8 @@ int main() {
 				"r - TRAIN\n" <<
 				"t - TRAIN QUICK\n" <<
 				"Make a choice: ";
-		cin >> c;
-		//c = '6';
+		//cin >> c;
+		c = 'j';
 
 		switch (c) {
 		case '1':
@@ -122,6 +122,10 @@ int main() {
 			break;
 		case 'i':
 			NeuralNetwork::trainOCR_spacing();
+			ImageProcessing::iterateOverImage();
+			break;
+		case 'j':
+			//NeuralNetwork::trainOCR_letters();
 			ImageProcessing::iterateOverImage();
 			break;
 		default:

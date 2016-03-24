@@ -19,16 +19,23 @@
 
 #include "utf8.h"
 
-#define INPUT_SIZE_LETTERS 1024
-#define INPUT_SIZE_SPACING 512
-#define TRANSFORMATION_COUNT 10 //cik reizes katru bildi pievienos tren?šanas setam (ori?in?ls + pamain?tas)
+#define INPUT_SIZE_LETTERS 1024 //32x32
+#define INPUT_SIZE_SPACING 256 //8x32
+#define LETTER_WIDTH 32
+#define LETTER_HEIGHT 32
+#define SPACING_WIDTH 8
+#define SPACING_HEIGHT 32
+
 //#define SYMBOL_COUNT 96
 //#define SYMBOL_COUNT 4
 //#define SYMBOL_COUNT 33
 
-#define DEFORMATION_AMOUNT 0.13
-
 #define SYMBOL_COUNT 10
+
+#define TRANSFORMATION_COUNT_SPACING 5 //cik reizes katru bildi pievienos tren?šanas setam (ori?in?ls + pamain?tas)
+#define TRANSFORMATION_COUNT_LETTER 8
+#define DEFORMATION_AMOUNT_SPACING 0.14
+#define DEFORMATION_AMOUNT_LETTER 0.15
 
 #define SORTING_VECTOR_COUNT 1000
 
@@ -90,8 +97,9 @@ public:
 	static void trainNN_spacing();
 	static void trainNN_letters();
 	static void testNN_letters();
+	static void testNN_image_letter(cv::Mat, int &idx, double &prob);
 	static void testNN_spacing();
-	static void testNN_image_spacing(cv::Mat);
+	static void testNN_image_spacing(cv::Mat, int &idx, double &prob);
 	static void readDataset_letters(int);
 	static void readDataset_spacing(int);
 	static void completeSpritesheet_letters(int t = 0);
