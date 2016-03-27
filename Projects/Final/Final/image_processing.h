@@ -89,7 +89,11 @@ public:
 	static void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal);
 	static PIX * removeImages(PIX *pixs);
 	static PIX * findWords(PIX *pixt1, BOXAA *baa, NUMAA *naa);
+	static void findWords_new(std::string);
+	static void findWords_cv(std::string);
 	static void writeWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr);
 	static void findWords2(char* dirin, char *dirout);
-	static void iterateOverImage();
+	static void iterateOverImage(cv::Mat);
+	static cv::Mat prepareImage(cv::Mat subImg);
+	static void cutWords();
 };

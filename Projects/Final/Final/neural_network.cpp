@@ -626,7 +626,7 @@ void NeuralNetwork::trainNN_spacing() {
 	const unsigned int num_input = INPUT_SIZE_SPACING;
 	const unsigned int num_output = 1;
 	const unsigned int num_layers = 4;
-	const float desired_error = (const float) 0.0001;
+	const float desired_error = (const float) 0.00009;
 	const unsigned int max_epochs = 500000;
 	const unsigned int epochs_between_reports = 100;
 
@@ -868,9 +868,8 @@ void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb)
 	int outputCount = SYMBOL_COUNT;
 
 	string imgString = Utilities::convertImageToString(resizedImg, false);
-	cout << imgString << endl << imgString.length();
+	//cout << imgString << endl << imgString.length() << endl;
 
-	cout << "t" << endl;
 	int correctCount = 0;
 	for (int j = 0; j < inputCount; j++) {
 		input[j] = imgString[j] - '0';
@@ -878,8 +877,6 @@ void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb)
 	for (int j = 0; j < outputCount; j++) {
 		expected_out[j] = 0; //UNKNOWN
 	}
-
-	cout << "t" << endl;
 
 	int currentLargestIdx = -1;
 	fann_type currentLargestValue = -1;
