@@ -19,12 +19,12 @@
 
 #include "utf8.h"
 
-#define INPUT_SIZE_LETTERS 1024 //32x32
-#define INPUT_SIZE_SPACING 256 //8x32
 #define LETTER_WIDTH 32
 #define LETTER_HEIGHT 32
 #define SPACING_WIDTH 8
 #define SPACING_HEIGHT 32
+#define INPUT_SIZE_LETTERS LETTER_WIDTH*LETTER_HEIGHT //32x32
+#define INPUT_SIZE_SPACING SPACING_WIDTH*SPACING_HEIGHT //8x32
 
 //#define SYMBOL_COUNT 96
 //#define SYMBOL_COUNT 4
@@ -32,10 +32,10 @@
 
 #define SYMBOL_COUNT 10
 
-#define TRANSFORMATION_COUNT_SPACING 5 //cik reizes katru bildi pievienos tren?šanas setam (ori?in?ls + pamain?tas)
+#define TRANSFORMATION_COUNT_SPACING 1 //cik reizes katru bildi pievienos tren?šanas setam (ori?in?ls + pamain?tas)
 #define TRANSFORMATION_COUNT_LETTER 7
-#define DEFORMATION_AMOUNT_SPACING 0.12
-#define DEFORMATION_AMOUNT_LETTER 0.15
+#define DEFORMATION_AMOUNT_SPACING 0.11
+#define DEFORMATION_AMOUNT_LETTER 0.11
 
 #define SORTING_VECTOR_COUNT 1000
 

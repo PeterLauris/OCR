@@ -64,6 +64,9 @@
 #define BGVAL_MIDDLE			186
 #define BGVAL_DELTA				30
 
+#define MIN_SPACING_PROBABILITY 0.8
+#define ALLOWED_ITERATION_ERROR 2
+
 
 struct SpacingGroup {
 public:
@@ -96,4 +99,6 @@ public:
 	static void iterateOverImage(cv::Mat);
 	static cv::Mat prepareImage(cv::Mat subImg);
 	static void cutWords();
+	static void convertTo1bpp(std::string src);
+	static std::vector<cv::Rect> detectLetters(cv::Mat img);
 };

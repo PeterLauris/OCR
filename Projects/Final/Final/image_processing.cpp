@@ -378,38 +378,39 @@ void ImageProcessing::findWords2(char* dirin, char *dirout) {
 }
 
 cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
-	if (subImg.cols > subImg.rows) {
-		int diff = subImg.cols - subImg.rows;
-		int x1 = diff / 2;
-		int x2 = x1 + subImg.rows; //lai ir kvadr?ts
-		subImg = subImg(cv::Range(0, subImg.rows), cv::Range(x1, x2));
+	//TODO needs to be improved
 
-		cout << "Image decreased!" << endl;
-		namedWindow("Decreased SubImg", CV_WINDOW_AUTOSIZE);
-		imshow("Decreased SubImg", subImg);
-		waitKey(0);
-		destroyWindow("Decreased SubImg");
-	}
-	else if (subImg.cols < subImg.rows) {
-		int diff = subImg.rows - subImg.cols;
+	Mat mSource_Gray, mThreshold;
+	cvtColor(subImg, mSource_Gray, COLOR_BGR2GRAY);
+	threshold(mSource_Gray, mThreshold, 254, 255, THRESH_BINARY_INV);
 
-		cout << "Image increased!" << endl;
+	Mat Points;
+	findNonZero(mThreshold, Points);
+	Rect Min_Rect = boundingRect(Points);
 
-		bitwise_not(subImg, subImg);
-		cv::Mat padded;
-		padded.create(subImg.rows, subImg.cols + diff, subImg.type()); //(diff+1)/2 nepieciešams, lai ar? nep?ra diff gad?jum? izveidotu kvadr?tu. p?ra gad?jum? tas neko nemaina
-		padded.setTo(cv::Scalar::all(0));
-		subImg.copyTo(padded(Rect(diff / 2, 0, subImg.cols, subImg.rows)));
-		subImg = padded;
-		bitwise_not(subImg, subImg);
+	//rectangle(subImg, Min_Rect.tl(), Min_Rect.br(), Scalar(0, 255, 0), 2);
+	//imshow("Result", subImg);
 
-		//TODO memory leak?
+	subImg = subImg(Min_Rect);
+	//TODO memory leak?
 
-		/*namedWindow("Increased SubImg", CV_WINDOW_AUTOSIZE);
-		imshow("Increased SubImg", subImg);
-		waitKey(0);
-		destroyWindow("Increased SubImg");*/
-	}
+	int diff = subImg.cols - subImg.rows;
+	int targetSize = (diff >= 0) ? subImg.cols : subImg.rows;
+
+	bitwise_not(subImg, subImg);
+	cv::Mat padded;
+	padded.create(targetSize, targetSize, subImg.type()); //(diff+1)/2 nepieciešams, lai ari nepara diff gadijuma izveidotu kvadratu. para gadijuma tas neko nemaina
+	padded.setTo(cv::Scalar::all(0));
+	if (diff > 0)
+		subImg.copyTo(padded(Rect(0, diff / 2, subImg.cols, subImg.rows)));
+	else
+		subImg.copyTo(padded(Rect(- diff / 2, 0, subImg.cols, subImg.rows)));
+	subImg = padded;
+	bitwise_not(subImg, subImg);
+
+
+	resize(subImg, subImg, Size(LETTER_WIDTH, LETTER_HEIGHT));
+	//TODO memoy leak?
 
 	return subImg;
 }
@@ -423,7 +424,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	int spacingIterationWidth = 1;
 	int spacingTestWidth = height / 4;
 
-	int letterIterationWidth = height / 9;
+	int letterIterationWidth = 1;
 	int letterTestWidth = height;
 
 	//TODO nestandarta izm?ru apstr?de
@@ -440,22 +441,18 @@ void ImageProcessing::iterateOverImage(Mat source) {
 
 		NeuralNetwork::testNN_image_spacing(subImg, calcIdx, calcProb);
 
-		cout << calcIdx << " " << calcProb << endl;
-
-		if (calcIdx == 1 && calcProb > 0.9) { //ir atstarpe
+		if (calcIdx == 1 && calcProb > MIN_SPACING_PROBABILITY) { //ir atstarpe
 			spacingCoordsFound.push_back(currX);
 		}
 
-		namedWindow("Spacing SubImg", CV_WINDOW_AUTOSIZE);
+		//cout << calcIdx << " " << calcProb << endl;
+		/*namedWindow("Spacing SubImg", CV_WINDOW_AUTOSIZE);
 		imshow("Spacing SubImg", subImg);
 		waitKey(0);
-		destroyWindow("Spacing SubImg");
+		destroyWindow("Spacing SubImg");*/
 
 		currX += spacingIterationWidth;
 	}
-
-	cout << "Total spacing positions found: " << spacingCoordsFound.size() << endl;
-
 
 	if (spacingCoordsFound.size() == 0) {
 		cout << "TODO no spacing found (only a letter??)" << endl;
@@ -463,14 +460,13 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	}
 
 	std::vector<SpacingGroup*> spacingGroups;
-
 	spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[0]));
 
 	//apstr?d? atrast?s koordin?tas
 	for (int i = 1; i < spacingCoordsFound.size(); i++) {
 		SpacingGroup *lastSpacingGroup = spacingGroups.back();
 
-		if (spacingCoordsFound[i] == lastSpacingGroup->startX + lastSpacingGroup->groupSize * spacingIterationWidth) { //current spacing belongs to this group
+		if (spacingCoordsFound[i] <= lastSpacingGroup->startX + (lastSpacingGroup->groupSize + ALLOWED_ITERATION_ERROR) * spacingIterationWidth) { //current spacing belongs to this group
 			lastSpacingGroup->Add();
 		}
 		else { //create a new spacing group
@@ -494,7 +490,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 			int currGroupX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth) / 2.0;
 
 			if (spacingGroups[i]->startX > 0) { //ja grupa nav paš? v?rda s?kum?
-
+				cout << "Xs: " << prevGroupX << " " << currGroupX << endl;
 				Mat subImg = source(cv::Range(0, height), cv::Range(prevGroupX, currGroupX));
 				subImg = prepareImage(subImg);
 				//TODO memory leak?
@@ -514,10 +510,11 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	Mat subImg = source(cv::Range(0, height), cv::Range(prevGroupX, source.cols));
 	subImg = prepareImage(subImg);
 	//TODO memory leak?
+	cout << subImg.cols << " " << subImg.rows << endl;
 
 	NeuralNetwork::testNN_image_letter(subImg, calcIdx, calcProb);
 
-	namedWindow("Coutout SubImg", CV_WINDOW_NORMAL);
+	namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
 	imshow("Coutout SubImg", subImg);
 	waitKey(0);
 	destroyWindow("Coutout SubImg");
@@ -530,7 +527,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	}
 }
 
-std::vector<cv::Rect> detectLetters(cv::Mat img)
+std::vector<cv::Rect> ImageProcessing::detectLetters(cv::Mat img)
 {
 	std::vector<cv::Rect> boundRect;
 	cv::Mat img_gray, img_sobel, img_threshold, element;
@@ -727,6 +724,35 @@ void ImageProcessing::cutWords() {
 		}
 
 		in >> s;
+	}
+}
+
+void ImageProcessing::convertTo1bpp(std::string src) {
+	SARRAY *safiles = getSortedPathnamesInDirectory(src.c_str(), NULL, 0, 0);
+	l_int32 nfiles = sarrayGetCount(safiles);
+	printf("Count received: %d\n", nfiles);
+	BOXAA *baa = boxaaCreate(nfiles);
+	NUMAA *naa = numaaCreate(nfiles);
+
+	char *fname;
+	PIX *pixs, *pixd;
+
+	for (l_int32 i = 0; i < nfiles; i++) {
+		printf("--- %d ---\n", i);
+		fname = sarrayGetString(safiles, i, 0);
+		if ((pixs = pixRead(fname)) == NULL) {
+			printf("image file %s not read\n", fname);
+			continue;
+		}
+
+		pixd = pixConvertTo1(pixs, 150);
+
+		char filename[BUF_SIZE];
+		snprintf(filename, BUF_SIZE, "%s", fname);
+		pixWrite(filename, pixd, IFF_PNG);
+
+		pixDestroy(&pixd);
+		pixDestroy(&pixs);
 	}
 }
 

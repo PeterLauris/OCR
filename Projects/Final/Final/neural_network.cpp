@@ -106,8 +106,8 @@ void NeuralNetwork::completeSpritesheet_letters(int type) {
 
 	ifstream in;
 
-	if (type == 0) in.open("../../../images/letters/training-set-spritesheet-original.txt");
-	else if (type == 1) in.open("../../../images/letters/test-set-spritesheet-original.txt");
+	if (type == 0) in.open("../../../images/learning/letters/training-set-spritesheet-original.txt");
+	else if (type == 1) in.open("../../../images/learning/letters/test-set-spritesheet-original.txt");
 	else {
 		cerr << "ERROR: Invalid type\n";
 		exit(1);
@@ -171,8 +171,8 @@ void NeuralNetwork::completeSpritesheet_letters(int type) {
 	//cout << newString << endl;
 
 	ofstream out;
-	if (type == 0) out.open("../../../images/letters/training-set-spritesheet.txt", std::ios::out | std::ios::binary);
-	else if (type == 1) out.open("../../../images/letters/test-set-spritesheet.txt", std::ios::out | std::ios::binary);
+	if (type == 0) out.open("../../../images/learning/letters/training-set-spritesheet.txt", std::ios::out | std::ios::binary);
+	else if (type == 1) out.open("../../../images/learning/letters/test-set-spritesheet.txt", std::ios::out | std::ios::binary);
 
 	out << newString;
 	out.close();
@@ -356,7 +356,7 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 
 	if (out.is_open()) {
 		int validFileCount = 0;
-		int inputSize = INPUT_SIZE_LETTERS; // 32*32
+		int inputSize = INPUT_SIZE_LETTERS;
 		string dataContent = "";
 
 		cout << imgPath << "\n";
@@ -388,7 +388,9 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 		cout << "Records count: " << recordsCount << endl;
 
 		for (int i = 0; i < recordsCount; i++) {
+			//cout << i << ": " << typeRecords[i].y << " " << typeRecords[i].y + LETTER_HEIGHT << " | " << typeRecords[i].x << " " << typeRecords[i].x + LETTER_WIDTH << endl;
 			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + LETTER_HEIGHT), cv::Range(typeRecords[i].x, typeRecords[i].x + LETTER_WIDTH));
+
 			Mat subInvImg;
 			bitwise_not(subImg, subInvImg);
 			srcTri[0] = Point2f(0, 0);
@@ -626,12 +628,12 @@ void NeuralNetwork::trainNN_spacing() {
 	const unsigned int num_input = INPUT_SIZE_SPACING;
 	const unsigned int num_output = 1;
 	const unsigned int num_layers = 4;
-	const float desired_error = (const float) 0.00009;
+	const float desired_error = (const float) 0.00001;
 	const unsigned int max_epochs = 500000;
 	const unsigned int epochs_between_reports = 100;
 
 
-	unsigned int layers[num_layers] = { num_input, 4, 4, num_output };
+	unsigned int layers[num_layers] = { num_input, 3, 3, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.3, 0.3);
 
@@ -645,8 +647,6 @@ void NeuralNetwork::trainNN_spacing() {
 	fann_save(ann, "result_spacing.net");
 
 	fann_destroy(ann);
-
-	getchar();
 }
 
 void NeuralNetwork::trainNN_letters() {
@@ -654,11 +654,11 @@ void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_layers = 4;
 	const unsigned int max_epochs = 500000;
 	const unsigned int epochs_between_reports = 20;
-	const float desired_error = 0.0001;//0.0015;
+	const float desired_error = 0.00001;
 
 	cout << "Training..." << endl;
 
-	unsigned int layers[num_layers] = { num_input, 10, 10, SYMBOL_COUNT };
+	unsigned int layers[num_layers] = { num_input, 9, 8, SYMBOL_COUNT };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.3, 0.3);
 

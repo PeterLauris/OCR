@@ -86,7 +86,7 @@ int main() {
 				"t - TRAIN QUICK\n" <<
 				"Make a choice: ";
 		//cin >> c;
-		c = 'i';
+		c = 'j';
 
 		switch (c) {
 		case '1':
@@ -122,17 +122,20 @@ int main() {
 			break;
 		case 'i':
 			NeuralNetwork::trainOCR_spacing();
-			ImageProcessing::iterateOverImage(imread("../../../images/test_digits_3.png"));
+			ImageProcessing::iterateOverImage(imread("../../../images/test_digits_1.png"));
 			break;
 		case 'j':
-			//NeuralNetwork::trainOCR_letters();
-			//ImageProcessing::iterateOverImage();
+			NeuralNetwork::trainOCR_letters();
+			ImageProcessing::iterateOverImage(imread("../../../images/test_digits_1.png"));
 			break;
 		case 'k':
 			ImageProcessing::findWords_cv("../../../images/pages/word_finding_2.png");
 			break;
 		case 'l':
 			ImageProcessing::cutWords();
+			break;
+		case 'b':
+			ImageProcessing::convertTo1bpp("../../../images/learning/letters/training-set/");
 			break;
 		default:
 			cleanup();
