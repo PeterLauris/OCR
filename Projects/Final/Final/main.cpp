@@ -41,7 +41,13 @@ BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 	return FALSE;
 }
 
-std::string* NeuralNetwork::SYMBOLS = new std::string[SYMBOL_COUNT]{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+std::string* NeuralNetwork::SYMBOLS = new std::string[SYMBOL_COUNT];/*{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+"A", "Ā", "B", "C", "Č", "D", "E", "Ē", "F", "G", "Ģ", "H", "I", "Ī", "J", "K", "Ķ", "L", "Ļ", "M", "N", "Ņ", "O", "P", "R", "S", "Š", "T", "U", "Ū", "V", "Z", "Ž",
+"a", "ā", "b", "c", "č", "d", "e", "ē", "f", "g", "ģ", "h", "i", "ī", "j", "k", "Ķ", "l", "ļ", "m", "n", "ņ", "o", "p", "r", "s", "š", "t", "u", "ū", "v", "z", "ž",
+"Q", "q", "W", "w", "X", "x", "Y", "y"
+}*/;
+
+
 std::string NeuralNetwork::dirLettersTrainingSet				=	"../../../images/learning/letters/training-set/";
 std::string NeuralNetwork::dirSpacingTrainingSet				=	"../../../images/learning/spacing/narrow/training-set/";
 std::string NeuralNetwork::dirSpacingTestSet					=	"../../../images/learning/spacing/narrow/test/1bpp/";
@@ -70,6 +76,14 @@ int main() {
 	/*for (int i = 0; i < 10; i++) {
 		cout << Utilities::randomInt(0, 9) << endl;
 	}*/
+
+	ifstream in;
+	in.open("symbols.in");
+	if (in.is_open()) {
+		for (int i = 0; i < SYMBOL_COUNT; i++) {
+			in >> NeuralNetwork::SYMBOLS[i];
+		}
+	}
 
 	char c;
 	do {

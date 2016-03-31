@@ -29,11 +29,11 @@
 //#define SYMBOL_COUNT 96
 //#define SYMBOL_COUNT 4
 //#define SYMBOL_COUNT 33
-
-#define SYMBOL_COUNT 10
+//#define SYMBOL_COUNT 10
+#define SYMBOL_COUNT 84
 
 #define TRANSFORMATION_COUNT_SPACING 1 //cik reizes katru bildi pievienos tren?šanas setam (ori?in?ls + pamain?tas)
-#define TRANSFORMATION_COUNT_LETTER 7
+#define TRANSFORMATION_COUNT_LETTER 1
 #define DEFORMATION_AMOUNT_SPACING 0.11
 #define DEFORMATION_AMOUNT_LETTER 0.11
 

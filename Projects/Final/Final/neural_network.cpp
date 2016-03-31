@@ -1,4 +1,4 @@
-#ifndef _NN_
+ï»¿#ifndef _NN_
 #define _NN_
 
 #include <iostream>
@@ -96,7 +96,7 @@ void NeuralNetwork::prepareTestData() {
 	cout << "Created 1bpp images of spacing test images\n";
 }
 
-//Pievieno spritesheet bild?m atbilstošos burtus
+//Pievieno spritesheet bild?m atbilstoÅ¡os burtus
 void NeuralNetwork::completeSpritesheet_letters(int type) {
 	cout << "Complete spritesheet" << endl;
 	string newString = "";
@@ -236,6 +236,25 @@ void NeuralNetwork::readDataset_letters(int type = 0) {
 				}
 				else if (readingLetter) {
 					num++;
+
+
+					/*int letterSize = utf8::distance(word.begin(), word.end());
+					if (letterSize == 2) {
+						cout << "UTF8!!!" << endl;
+					}*/
+					/*if (letterSize == 1)
+						newString.append(letter);
+					else {
+						string tmp = letter.substr(0, letterSize / 2);
+						if (utf8::is_valid(tmp.begin(), tmp.end())) {
+							newString.append(tmp);
+						}
+						else {
+							newString.append(letter.substr(0, 2));
+						}
+					}*/
+
+
 					typeRecords[num].letter = word;
 					//cout << "Letter : " << word << "\n";
 					readingLetter = false;
@@ -258,7 +277,7 @@ void NeuralNetwork::readDataset_letters(int type = 0) {
 	in.close();
 }
 
-//nolasa katrai spritesheet bildei atbilstošo simbolu no txt faila
+//nolasa katrai spritesheet bildei atbilstoÅ¡o simbolu no txt faila
 void NeuralNetwork::readDataset_spacing(int type = 0) {
 	ifstream in;
 	if (type == 0) {
@@ -449,15 +468,30 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 				}
 
 				resString += "\n";
+				bool found = false;
 				for (int j = 0; j < SYMBOL_COUNT; j++) {
 					if (typeRecords[i].letter == SYMBOLS[j]) {
 						resString += "1 ";
+						found = true;
 					}
 					else {
 						resString += "-1 ";
 					}
 				}
 				resString += "\n";
+
+				if (!found) {
+					cout << "Symbol not found!";
+					/*ofstream out;
+					out.open("nf.out");
+					out << typeRecords[i].letter << "\r\n";
+
+					for (int k = 0; k < SYMBOL_COUNT; k++) {
+						out << SYMBOLS[k] << " ";
+					}
+					out.close();*/
+					getchar();
+				}
 
 				sortingVector[Utilities::randomInt(0, SORTING_VECTOR_COUNT - 1)].push_back(resString);
 			}
@@ -653,12 +687,12 @@ void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_input = INPUT_SIZE_LETTERS;
 	const unsigned int num_layers = 4;
 	const unsigned int max_epochs = 500000;
-	const unsigned int epochs_between_reports = 20;
-	const float desired_error = 0.00001;
+	const unsigned int epochs_between_reports = 100;
+	const float desired_error = 0.0001;
 
 	cout << "Training..." << endl;
 
-	unsigned int layers[num_layers] = { num_input, 9, 8, SYMBOL_COUNT };
+	unsigned int layers[num_layers] = { num_input, 60, 60, SYMBOL_COUNT };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.3, 0.3);
 
@@ -895,7 +929,7 @@ void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb)
 	calcProb = tmp[currentLargestIdx];
 }
 
-// Izsauc nepieciešam?s funkcijas OCR tren?šanai
+// Izsauc nepiecieÅ¡am?s funkcijas OCR tren?Å¡anai
 void NeuralNetwork::trainOCR_letters() {
 	completeSpritesheet_letters();
 	readDataset_letters();
