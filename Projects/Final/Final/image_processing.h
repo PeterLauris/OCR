@@ -65,7 +65,7 @@
 #define BGVAL_DELTA				30
 
 #define MIN_SPACING_PROBABILITY 0.8
-#define ALLOWED_ITERATION_ERROR 2
+#define ALLOWED_ITERATION_ERROR 1
 
 
 struct SpacingGroup {
@@ -92,7 +92,6 @@ public:
 	static void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal);
 	static PIX * removeImages(PIX *pixs);
 	static PIX * findWords(PIX *pixt1, BOXAA *baa, NUMAA *naa);
-	static void findWords_new(std::string);
 	static void findWords_cv(std::string);
 	static void writeWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr);
 	static void findWords2(char* dirin, char *dirout);
@@ -101,4 +100,5 @@ public:
 	static void cutWords();
 	static void convertTo1bpp(std::string src);
 	static std::vector<cv::Rect> detectLetters(cv::Mat img);
+	static void testFoundSymbols(cv::Mat source, std::vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth);
 };

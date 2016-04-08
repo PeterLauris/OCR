@@ -1,4 +1,4 @@
-#ifndef _IMAGE_PROC_
+﻿#ifndef _IMAGE_PROC_
 #define _IMAGE_PROC_
 
 #include <stdlib.h>
@@ -144,39 +144,6 @@ PIX * ImageProcessing::removeNoise(PIX *pixs, l_int32 *lightingVal) {
 
 	return pix_new;
 }
-
-/*void testRemoveNoise(PIX *pixs) {
-PIX *pix_gamma = NULL;
-PIX *pix_contrast = NULL;
-PIX *pix_unsharp = NULL;
-PIX *pix_1bpp = NULL;
-char filename[BUF_SIZE];
-for (float gamma = 0.5; gamma < 1.5; gamma += 0.3) {
-for (int minVal = 0; minVal < 125; minVal += 20) {
-for (int maxVal = 255; maxVal > 130; maxVal -= 20) {
-pix_gamma = pixGammaTRC(pix_gamma, pixs, gamma, minVal, maxVal);
-for (float contrast = 0.1; contrast < 1; contrast += 0.2) {
-pix_contrast = pixContrastTRC(pix_contrast, pix_gamma, contrast);
-for (int halfwidth = 1; halfwidth < 3; halfwidth += 1) {
-for (float fract = 0.1; fract < 1; fract += 0.2) {
-pix_unsharp = pixUnsharpMaskingGray2D(pix_contrast, halfwidth, fract);
-for (int i = 140; i < 170; i += 10) {
-pix_1bpp = pixConvertTo1(pix_unsharp, i);
-
-snprintf(filename, BUF_SIZE, "%s_%f_%d_%d_%f_%d_%f_%d.png", "../../../images/results/noise-test/NOISE", gamma, minVal, maxVal, contrast, halfwidth, fract, i);
-pixWrite(filename, pix_1bpp, IFF_PNG);
-pixDestroy(&pix_1bpp);
-}
-pixDestroy(&pix_unsharp);
-}
-}
-pixDestroy(&pix_contrast);
-}
-pixDestroy(&pix_gamma);
-}
-}
-}
-}*/
 
 void ImageProcessing::PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal)
 {
@@ -377,6 +344,10 @@ void ImageProcessing::findWords2(char* dirin, char *dirout) {
 	numaDestroy(&natl);
 }
 
+
+
+///Sagatvo burta attēlu atpazīšanai
+///Atrod burtu, nocentrē to
 cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	//TODO needs to be improved
 
@@ -391,28 +362,110 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	//rectangle(subImg, Min_Rect.tl(), Min_Rect.br(), Scalar(0, 255, 0), 2);
 	//imshow("Result", subImg);
 
-	subImg = subImg(Min_Rect);
-	//TODO memory leak?
+	Mat tmp = subImg(Min_Rect);
+	subImg.release();
+	subImg = tmp;
+
+	if (subImg.cols == 0 || subImg.rows == 0) { //attela nekas netika atrasts
+		Points.release();
+		mThreshold.release();
+		mSource_Gray.release();
+		return subImg;
+	}
 
 	int diff = subImg.cols - subImg.rows;
 	int targetSize = (diff >= 0) ? subImg.cols : subImg.rows;
 
-	bitwise_not(subImg, subImg);
+	bitwise_not(subImg, tmp);
+	subImg.release();
+	subImg = tmp;
 	cv::Mat padded;
-	padded.create(targetSize, targetSize, subImg.type()); //(diff+1)/2 nepiecie�ams, lai ari nepara diff gadijuma izveidotu kvadratu. para gadijuma tas neko nemaina
+	padded.create(targetSize, targetSize, subImg.type()); //(diff+1)/2 nepieciešams, lai ari nepara diff gadijuma izveidotu kvadratu. para gadijuma tas neko nemaina
 	padded.setTo(cv::Scalar::all(0));
+	//cout << "s1 " << (diff / 2) << " " << subImg.cols << " " << subImg.rows << endl;
 	if (diff > 0)
 		subImg.copyTo(padded(Rect(0, diff / 2, subImg.cols, subImg.rows)));
 	else
 		subImg.copyTo(padded(Rect(- diff / 2, 0, subImg.cols, subImg.rows)));
+
+	subImg.release();
 	subImg = padded;
-	bitwise_not(subImg, subImg);
 
+	bitwise_not(subImg, tmp);
+	subImg.release();
+	subImg = tmp;
 
-	resize(subImg, subImg, Size(LETTER_WIDTH, LETTER_HEIGHT));
-	//TODO memoy leak?
+	resize(subImg, tmp, Size(LETTER_WIDTH, LETTER_HEIGHT));
+	subImg.release();
+	subImg = tmp;
 
+	Points.release();
+	mThreshold.release();
+	mSource_Gray.release();
 	return subImg;
+}
+
+void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth) {
+	std::vector<SymbolResult*> wordResults;
+	int prevGroupX = 0;
+	int nr = 0;
+	struct fann *ann = fann_create_from_file("result_letters.net");
+	for (int i = 0; i < spacingGroups.size(); i++) {
+		if (spacingGroups[i]->groupSize > 1) { //spacing group is valid
+			int currGroupX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth) / 2.0;
+
+			if (spacingGroups[i]->startX > 0) { //ja grupa nav paš? v?rda s?kum?
+				cout << "Xs: " << prevGroupX << " " << currGroupX << endl;
+				Mat subImg = source(cv::Range(0, source.rows), cv::Range(prevGroupX, currGroupX));
+				cout << "S: " << subImg.rows << " " << subImg.cols << endl;
+				Mat tmp = prepareImage(subImg);
+				subImg.release();
+				subImg = tmp;
+
+				if (subImg.cols == 0 || subImg.rows == 0) {
+					subImg.release();
+					continue;
+				}
+
+				SymbolResult *result = NeuralNetwork::testNN_image_letter(subImg, ann);
+				wordResults.push_back(result);
+
+				/*namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
+				imshow("Coutout SubImg", subImg);
+				waitKey(0);
+				destroyWindow("Coutout SubImg");*/
+
+				string name = "../../../images/results/spacing/r_" + to_string(nr) + ".jpg";
+				imwrite(name, subImg);
+				subImg.release();
+				nr++;
+			}
+
+			prevGroupX = currGroupX;
+		}
+	}
+	//parbauda arī pēdējo simbolu, aiz kura nav atstarpe
+	//Mat subImg = source(cv::Range(0, source.rows), cv::Range(prevGroupX, source.cols));
+	//subImg = prepareImage(subImg);
+	//TODO memory leak?
+	//cout << subImg.cols << " " << subImg.rows << endl;
+
+	//SymbolResult *result = NeuralNetwork::testNN_image_letter(subImg);
+	//wordResults.push_back(result);
+
+	std::string resultWord = NeuralNetwork::determineWord(wordResults);
+	cout << "Result word: " << resultWord << endl;
+
+	cout << "Clear wordResults vector" << endl;
+	while(wordResults.size() > 0) {
+		delete wordResults.back();
+		wordResults.pop_back();
+	}
+
+	/*namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
+	imshow("Coutout SubImg", subImg);
+	waitKey(0);
+	destroyWindow("Coutout SubImg");*/
 }
 
 void ImageProcessing::iterateOverImage(Mat source) {
@@ -427,30 +480,24 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	int letterIterationWidth = 1;
 	int letterTestWidth = height;
 
-	//TODO nestandarta izm?ru apstr?de
 	std::vector<int> spacingCoordsFound;
 	int calcIdx;
 	double calcProb;
 
+	struct fann *ann = fann_create_from_file("result_spacing.net");
 
 	// TODO test if (width >= height) {
-	//iter? p?ri source, lai atrastu atstarpes
+	//iterē pāri attēlam, lai atrastu atstarpes
 	int currX = 0;
 	while (currX + spacingTestWidth <= width) {
 		Mat subImg = source(cv::Range(0, height), cv::Range(currX, currX + spacingTestWidth));
-
-		NeuralNetwork::testNN_image_spacing(subImg, calcIdx, calcProb);
+		NeuralNetwork::testNN_image_spacing(subImg, calcIdx, calcProb, ann);
 
 		if (calcIdx == 1 && calcProb > MIN_SPACING_PROBABILITY) { //ir atstarpe
 			spacingCoordsFound.push_back(currX);
 		}
 
-		//cout << calcIdx << " " << calcProb << endl;
-		/*namedWindow("Spacing SubImg", CV_WINDOW_AUTOSIZE);
-		imshow("Spacing SubImg", subImg);
-		waitKey(0);
-		destroyWindow("Spacing SubImg");*/
-
+		subImg.release();
 		currX += spacingIterationWidth;
 	}
 
@@ -462,7 +509,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	std::vector<SpacingGroup*> spacingGroups;
 	spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[0]));
 
-	//apstr?d? atrast?s koordin?tas
+	//apstrādā atrastās atstarpju koordinātas, sadala tās pa grupām
 	for (int i = 1; i < spacingCoordsFound.size(); i++) {
 		SpacingGroup *lastSpacingGroup = spacingGroups.back();
 
@@ -484,41 +531,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	}
 	cout << "Valid spacing groups found: " << validCount << endl;
 
-	int prevGroupX = 0;
-	for (int i = 0; i < spacingGroups.size(); i++) {
-		if (spacingGroups[i]->groupSize > 1) { //spacing group is valid
-			int currGroupX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth) / 2.0;
-
-			if (spacingGroups[i]->startX > 0) { //ja grupa nav pa�? v?rda s?kum?
-				cout << "Xs: " << prevGroupX << " " << currGroupX << endl;
-				Mat subImg = source(cv::Range(0, height), cv::Range(prevGroupX, currGroupX));
-				subImg = prepareImage(subImg);
-				//TODO memory leak?
-
-				NeuralNetwork::testNN_image_letter(subImg, calcIdx, calcProb);
-
-				namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
-				imshow("Coutout SubImg", subImg);
-				waitKey(0);
-				destroyWindow("Coutout SubImg");
-			}
-
-			prevGroupX = currGroupX;
-		}
-	}
-	//parbauda ar? p?d?jo simbolu, aiz kura nav atstarpe
-	Mat subImg = source(cv::Range(0, height), cv::Range(prevGroupX, source.cols));
-	subImg = prepareImage(subImg);
-	//TODO memory leak?
-	cout << subImg.cols << " " << subImg.rows << endl;
-
-	NeuralNetwork::testNN_image_letter(subImg, calcIdx, calcProb);
-
-	namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
-	imshow("Coutout SubImg", subImg);
-	waitKey(0);
-	destroyWindow("Coutout SubImg");
-
+	testFoundSymbols(source, spacingGroups, spacingIterationWidth, spacingTestWidth);
 
 	//clear memory
 	while (!spacingGroups.empty()) {
@@ -527,6 +540,8 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	}
 }
 
+
+///Atrod vektoru ar vārdiem attēlā
 std::vector<cv::Rect> ImageProcessing::detectLetters(cv::Mat img)
 {
 	std::vector<cv::Rect> boundRect;
@@ -550,15 +565,74 @@ std::vector<cv::Rect> ImageProcessing::detectLetters(cv::Mat img)
 	return boundRect;
 }
 
-
+///Izgriež vārdus, izmantojot OpenCV
 void ImageProcessing::findWords_cv(string filename) {
-	cv::Mat img1 = cv::imread(filename);
+
+	Mat rgb = imread(filename);
+	// downsample and use it for processing
+	//pyrDown(large, rgb);
+	Mat small;
+	cvtColor(rgb, small, CV_BGR2GRAY);
+	// morphological gradient
+	Mat grad;
+	Mat morphKernel = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	morphologyEx(small, grad, MORPH_GRADIENT, morphKernel);
+	// binarize
+	Mat bw;
+	threshold(grad, bw, 0.0, 255.0, THRESH_BINARY | THRESH_OTSU);
+	// connect horizontally oriented regions
+	Mat connected;
+	morphKernel = getStructuringElement(MORPH_RECT, Size(rgb.cols/20, 1));
+	morphologyEx(bw, connected, MORPH_CLOSE, morphKernel);
+	// find contours
+	Mat mask = Mat::zeros(bw.size(), CV_8UC1);
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+	findContours(connected, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	// filter contours
+	for (int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+	{
+		Rect rect = boundingRect(contours[idx]);
+		Mat maskROI(mask, rect);
+		maskROI = Scalar(0, 0, 0);
+		// fill the contour
+		drawContours(mask, contours, idx, Scalar(255, 255, 255), CV_FILLED);
+		// ratio of non-zero pixels in the filled region
+		double r = (double)countNonZero(maskROI) / (rect.width*rect.height);
+
+		if (r > .45 /* assume at least 45% of the area is filled if it contains text */
+			&&
+			(rect.height > 8 && rect.width > 8) /* constraints on region size */
+												/* these two conditions alone are not very robust. better to use something
+												like the number of significant peaks in a horizontal projection as a third condition */
+			)
+		{
+			//rectangle(rgb, rect, Scalar(0, 255, 0), 1);
+
+			Mat subImg = rgb(rect);
+
+			namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
+			imshow("Coutout SubImg", subImg);
+			waitKey(0);
+			destroyWindow("Coutout SubImg");
+
+			iterateOverImage(subImg);
+		}
+	}
+	/*namedWindow("Coutout SubImg", CV_WINDOW_AUTOSIZE);
+	imshow("Coutout SubImg", rgb);
+	waitKey(0);
+	destroyWindow("Coutout SubImg");*/
+	//imwrite(OUTPUT_FOLDER_PATH + string("rgb.jpg"), rgb);
+
+
+
+	/*cv::Mat img1 = cv::imread(filename);
 	//Detect
 	std::vector<cv::Rect> letterBBoxes1 = detectLetters(img1);
 	//Display
 	for (int i = 0; i < letterBBoxes1.size(); i++) {
-		//cv::rectangle(img1, letterBBoxes1[i], cv::Scalar(0, 255, 0), 3, 8, 0);
-
+		cv::rectangle(img1, letterBBoxes1[i], cv::Scalar(0, 255, 0), 1, 8, 0);
 
 		Mat subImg = img1(letterBBoxes1[i]);
 
@@ -567,114 +641,13 @@ void ImageProcessing::findWords_cv(string filename) {
 		waitKey(0);
 		destroyWindow("Coutout SubImg");
 
-		iterateOverImage(subImg);
+		//iterateOverImage(subImg);
 	}
-	//cv::imwrite("imgOut1.jpg", img1);
+	//cv::imwrite("imgOut1.jpg", img1);*/
 }
 
-void ImageProcessing::findWords_new(string filename) {
-	/*PIX *pixs = pixRead(filename.c_str());
-
-	if (pixs == NULL) {
-		printf("Image file %s not read\n", filename);
-		return;
-	}
-
-	BOXAA *baa = boxaaCreate(100);
-	NUMAA *naa = numaaCreate(100);
-	PIX *pix_words = ImageProcessing::findWords(pixs, baa, naa);
-	ImageProcessing::writeWords(pix_words, "../../../images", "word_finding_result");
-
-	pixDestroy(&pix_words);
-	numaaDestroy(&naa);
-	boxaaDestroy(&baa);
-	pixDestroy(&pixs);*/
-
-	char *dirin, *dirout_1bpp, *dirout_words, *dirout, *rootname, *fname;
-
-	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_noise, *pix_words;
-
-	JBDATA *jbdata;
-	JBCLASSER *classer;
-
-	l_int32 firstpage = 0;
-	l_int32 npages = 0;
-
-	dirin = "../../../images/pages";
-	dirout_1bpp = "../../../images/results/1bpp";
-	dirout_words = "../../../images/results/words";
-	dirout = "../../../images/results";
-	rootname = "result";
-
-	//Compute the word bounding boxes at 2x reduction, along with
-	//the textlines that they are in.
-	/*SARRAY *safiles = getSortedPathnamesInDirectory(dirin, NULL, firstpage, npages);
-	l_int32 nfiles = sarrayGetCount(safiles);
-	printf("Count received: %d\n", nfiles);
-	BOXAA *baa = boxaaCreate(nfiles);
-	NUMAA *naa = numaaCreate(nfiles);
-
-
-	printf("Begin image processing\n");
-
-	//l_int32 w, h;
-	//l_float32 deg2rad = 3.1415926535 / 180.;
-	//pixGetDimensions(pixs, &w, &h, NULL);
-	//pixFindSkew(pix_tmp, &angle, &conf);
-	//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
-
-	for (l_int32 i = 0; i < nfiles; i++) {
-		printf("--- %d ---\n", i);
-		fname = sarrayGetString(safiles, i, 0);
-		if ((pixs = pixRead(fname)) == NULL) {
-			printf("image file %s not read\n", fname);
-			continue;
-		}
-
-		l_float32 angle, conf, score;
-		l_int32 lightingVal;
-
-		pix_deskew = pixDeskew(pixs, 0);
-
-		//pix_light = ImageProcessing::normalizeLighting(pix_deskew, &lightingVal);
-		//pix_noise = ImageProcessing::removeNoise(pix_light, &lightingVal);
-
-		pixt = pixConvertTo1(pix_deskew, 150);
-
-		//create a 1bpp image in the corresponding location
-		char filename[BUF_SIZE];
-		snprintf(filename, BUF_SIZE, "%s%s%s.%05d.png", dirout_1bpp, "/", rootname, i);
-		pixWrite(filename, pixt, IFF_PNG);
-
-		pix_words = ImageProcessing::findWords(pixt, baa, naa);
-		ImageProcessing::writeWords(pix_words, dirout_words, rootname, i);
-
-
-		pixDestroy(&pixt);
-		//pixDestroy(&pix_light);
-		//pixDestroy(&pix_noise);
-		pixDestroy(&pix_deskew);
-		pixDestroy(&pix_words);
-		pixDestroy(&pixs);
-		printf("\n\n", i);
-	}
-
-	pixDestroy(&pixt);
-	pixDestroy(&pix_deskew);
-	//pixDestroy(&pix_light);
-	//pixDestroy(&pix_noise);
-	pixDestroy(&pix_words);
-	pixDestroy(&pixs);
-	boxaaDestroy(&baa);
-	numaaDestroy(&naa);
-	sarrayDestroy(&safiles);*/
-
-	findWords2(dirout_1bpp, dirout);
-
-	printf("\n---\nEND\n");
-	getchar();
-}
-
+//TODO iepējams nav nepieciešams
+///Ņem lielo failu ar atrastajiem vārdiem un sagriež bildes
 void ImageProcessing::cutWords() {
 	ifstream in;
 	in.open("../../../images/results/result.data");

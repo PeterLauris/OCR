@@ -68,7 +68,6 @@ RecordInfo* NeuralNetwork::testRecords_spacing;
 clock_t Utilities::startTime;
 
 int main() {
-
 	BOOL ret = SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
 
 	srand(time(NULL));
@@ -100,7 +99,9 @@ int main() {
 				"t - TRAIN QUICK\n" <<
 				"Make a choice: ";
 		//cin >> c;
-		c = 'j';
+		c = 'i';
+
+		Mat source;
 
 		switch (c) {
 		case '1':
@@ -136,14 +137,18 @@ int main() {
 			break;
 		case 'i':
 			NeuralNetwork::trainOCR_spacing();
-			ImageProcessing::iterateOverImage(imread("../../../images/test_digits_1.png"));
+			source = imread("../../../images/iteration_test_5.png");
+			ImageProcessing::iterateOverImage(source);
+			source.release();
 			break;
 		case 'j':
 			NeuralNetwork::trainOCR_letters();
-			ImageProcessing::iterateOverImage(imread("../../../images/test_digits_1.png"));
+			source = imread("../../../images/iteration_test_5.png");
+			ImageProcessing::iterateOverImage(source);
+			source.release();
 			break;
 		case 'k':
-			ImageProcessing::findWords_cv("../../../images/pages/word_finding_2.png");
+			ImageProcessing::findWords_cv("../../../images/pages/word_finding_1.png");
 			break;
 		case 'l':
 			ImageProcessing::cutWords();

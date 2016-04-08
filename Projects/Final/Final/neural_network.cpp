@@ -96,7 +96,9 @@ void NeuralNetwork::prepareTestData() {
 	cout << "Created 1bpp images of spacing test images\n";
 }
 
-//Pievieno spritesheet bild?m atbilstošos burtus
+
+
+//Pievieno simbolu spritesheet teksta failam bildēm atbilstošos burtus
 void NeuralNetwork::completeSpritesheet_letters(int type) {
 	cout << "Complete spritesheet" << endl;
 	string newString = "";
@@ -178,7 +180,7 @@ void NeuralNetwork::completeSpritesheet_letters(int type) {
 	out.close();
 }
 
-//Nolasa spritesheet
+///Nolasa katrai simbolu spritesheet bildei atbilstošo simbolu un tā koordinātas no txt faila
 void NeuralNetwork::readDataset_letters(int type = 0) {
 	ifstream in;
 	if (type == 0) {
@@ -277,7 +279,7 @@ void NeuralNetwork::readDataset_letters(int type = 0) {
 	in.close();
 }
 
-//nolasa katrai spritesheet bildei atbilstošo simbolu no txt faila
+///Nolasa katrai atstarpju spritesheet bildei atbilstošo simbolu un tā koordinātas no txt faila
 void NeuralNetwork::readDataset_spacing(int type = 0) {
 	ifstream in;
 	if (type == 0) {
@@ -354,6 +356,148 @@ void NeuralNetwork::readDataset_spacing(int type = 0) {
 	in.close();
 }
 
+///Izveido treniņa failu atstarpju trenēšanai
+void NeuralNetwork::createNNData_spacing(int type = 0) {
+	string imgPath = "";
+
+	ofstream out;
+	if (type == 0) {
+		out.open("train_spacing.in");
+		imgPath = NeuralNetwork::dirSpacingTrainingSpritemap.c_str();
+		cout << "Creating spacing training data..." << endl;
+	}
+	else if (type == 1) {
+		out.open("test_spacing.in");
+		imgPath = NeuralNetwork::dirSpacingTestSpritemap.c_str();
+		cout << "Creating spacing test data..." << endl;
+	}
+	else {
+		cerr << "ERROR: Invalid type\n";
+		exit(1);
+	}
+
+	if (out.is_open()) {
+		int validFileCount = 0;
+		int inputSize = INPUT_SIZE_SPACING; // 10*32
+		string dataContent = "";
+
+		cout << imgPath << "\n";
+
+		Mat img = imread(imgPath);
+		if (img.empty()) {
+			cout << "Cannot load " << imgPath << endl;
+			return;
+		}
+		//cvtColor(img, img, CV_BGR2GRAY);
+
+		RecordInfo* typeRecords;
+		if (type == 0) typeRecords = NeuralNetwork::trainingRecords_spacing;
+		else if (type == 1) typeRecords = NeuralNetwork::testRecords_spacing;
+		else {
+			cout << "Wrong type!" << endl;
+			exit(1);
+		}
+
+		int repCount = (type == 0) ? TRANSFORMATION_COUNT_SPACING : 1;
+
+		Point2f srcTri[3];
+		Point2f dstTri[3];
+		Mat rot_mat(2, 3, CV_32FC1);
+		Mat warp_mat(2, 3, CV_32FC1);
+		Mat warp_dst, warp_rotate_dst;
+
+		std::vector<std::vector<string> > sortingVector(SORTING_VECTOR_COUNT, std::vector<string>());
+
+		for (int i = 0; i < recordsCount; i++) {
+			//cout << typeRecords[i].y << " " << typeRecords[i].x << endl;
+			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + SPACING_HEIGHT), cv::Range(typeRecords[i].x, typeRecords[i].x + SPACING_WIDTH));
+			Mat subInvImg;
+			bitwise_not(subImg, subInvImg);
+			srcTri[0] = Point2f(0, 0);
+			srcTri[1] = Point2f(subImg.cols - 1, 0);
+			srcTri[2] = Point2f(0, subImg.rows - 1);
+
+			//for (int rep = 0; rep < repCount; rep++) {
+			//	string resString = Utilities::convertImageToString(subImg, true);
+
+			//	dataContent += resString + "\n";
+			//	dataContent += typeRecords[i].letter; //1, ja atstarpe, 0, ja nav
+			//	dataContent += "\n";
+			//}
+
+			for (int rep = 0; rep < repCount; rep++) {
+				string resString = "";
+
+				if (rep > 0) { //pirmaj? iter?cij? ori?in?lu nemaina
+							   //randomly modify subImg
+					warp_dst = Mat::zeros(subInvImg.rows, subInvImg.cols, subInvImg.type());
+
+					dstTri[0] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING));
+					dstTri[1] = Point2f(subInvImg.cols*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_SPACING, 1), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING));
+					dstTri[2] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING), subInvImg.rows*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_SPACING, 1));
+
+					warp_mat = getAffineTransform(srcTri, dstTri);
+
+					//warp_dst.setTo(255);
+					warpAffine(subInvImg, warp_dst, warp_mat, warp_dst.size());
+
+					bitwise_not(warp_dst, warp_dst);
+
+					//TODO vai vajag izt?r?t atmi?u??
+					int erosion_type;
+					int erosion_elem = 0 + (rand() % (int)(2 - 0 + 1));
+					int erosion_size = (0 + (rand() % (int)(2 - 0 + 1))) / 2; //66%, ka 0
+
+					Mat erosion_dst;
+					if (erosion_elem == 0) { erosion_type = MORPH_RECT; }
+					else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
+					else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
+
+					Mat element = getStructuringElement(erosion_type,
+						Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+						Point(erosion_size, erosion_size));
+
+					erode(warp_dst, erosion_dst, element);
+
+					/*namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
+					imshow("MyWindow", erosion_dst);
+					waitKey(0);
+					destroyWindow("MyWindow");*/
+
+					resString = Utilities::convertImageToString(erosion_dst, true);
+				}
+				else {
+					resString = Utilities::convertImageToString(subImg, true);
+				}
+
+				if (typeRecords[i].letter == "1") {
+					resString += "\n1\n";
+				}
+				else {
+					resString += "\n-1\n";
+				}
+
+				sortingVector[Utilities::randomInt(0, SORTING_VECTOR_COUNT - 1)].push_back(resString);
+			}
+
+			subImg.release();
+		}
+		img.release();
+
+		for (int i = 0; i < SORTING_VECTOR_COUNT; i++) {
+			while (!sortingVector[i].empty()) {
+				dataContent += sortingVector[i].back();
+				sortingVector[i].pop_back();
+			}
+		}
+
+		out << (recordsCount*repCount) << " " << inputSize << " " << 1 << "\n" << dataContent;
+		out.close();
+	}
+	cout << "Finished" << endl;
+}
+
+///Izveido treniņa failu simbolu trenēšanai
 void NeuralNetwork::createNNData_letters(int type = 0) {
 	string imgPath = "";
 
@@ -482,14 +626,14 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 
 				if (!found) {
 					cout << "Symbol not found!";
-					/*ofstream out;
+					ofstream out;
 					out.open("nf.out");
-					out << typeRecords[i].letter << "\r\n";
+					out << "Symbol: " << typeRecords[i].letter << "\r\n";
 
 					for (int k = 0; k < SYMBOL_COUNT; k++) {
 						out << SYMBOLS[k] << " ";
 					}
-					out.close();*/
+					out.close();
 					getchar();
 				}
 
@@ -518,158 +662,19 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 	}
 }
 
-void NeuralNetwork::createNNData_spacing(int type = 0) {
-	string imgPath = "";
-
-	ofstream out;
-	if (type == 0) {
-		out.open("train_spacing.in");
-		imgPath = NeuralNetwork::dirSpacingTrainingSpritemap.c_str();
-		cout << "Creating spacing training data..." << endl;
-	}
-	else if (type == 1) {
-		out.open("test_spacing.in");
-		imgPath = NeuralNetwork::dirSpacingTestSpritemap.c_str();
-		cout << "Creating spacing test data..." << endl;
-	}
-	else {
-		cerr << "ERROR: Invalid type\n";
-		exit(1);
-	}
-
-	if (out.is_open()) {
-		int validFileCount = 0;
-		int inputSize = INPUT_SIZE_SPACING; // 10*32
-		string dataContent = "";
-
-		cout << imgPath << "\n";
-
-		Mat img = imread(imgPath);
-		if (img.empty()) {
-			cout << "Cannot load " << imgPath << endl;
-			return;
-		}
-		//cvtColor(img, img, CV_BGR2GRAY);
-
-		RecordInfo* typeRecords;
-		if (type == 0) typeRecords = NeuralNetwork::trainingRecords_spacing;
-		else if (type == 1) typeRecords = NeuralNetwork::testRecords_spacing;
-		else {
-			cout << "Wrong type!" << endl;
-			exit(1);
-		}
-
-		int repCount = (type == 0) ? TRANSFORMATION_COUNT_SPACING : 1;
-
-		Point2f srcTri[3];
-		Point2f dstTri[3];
-		Mat rot_mat(2, 3, CV_32FC1);
-		Mat warp_mat(2, 3, CV_32FC1);
-		Mat warp_dst, warp_rotate_dst;
-
-		std::vector<std::vector<string> > sortingVector(SORTING_VECTOR_COUNT, std::vector<string>());
-
-		for (int i = 0; i < recordsCount; i++) {
-			//cout << typeRecords[i].y << " " << typeRecords[i].x << endl;
-			Mat subImg = img(cv::Range(typeRecords[i].y, typeRecords[i].y + SPACING_HEIGHT), cv::Range(typeRecords[i].x, typeRecords[i].x + SPACING_WIDTH));
-			Mat subInvImg;
-			bitwise_not(subImg, subInvImg);
-			srcTri[0] = Point2f(0, 0);
-			srcTri[1] = Point2f(subImg.cols - 1, 0);
-			srcTri[2] = Point2f(0, subImg.rows - 1);
-
-			//for (int rep = 0; rep < repCount; rep++) {
-			//	string resString = Utilities::convertImageToString(subImg, true);
-
-			//	dataContent += resString + "\n";
-			//	dataContent += typeRecords[i].letter; //1, ja atstarpe, 0, ja nav
-			//	dataContent += "\n";
-			//}
-
-			for (int rep = 0; rep < repCount; rep++) {
-				string resString = "";
-
-				if (rep > 0) { //pirmaj? iter?cij? ori?in?lu nemaina
-							   //randomly modify subImg
-					warp_dst = Mat::zeros(subInvImg.rows, subInvImg.cols, subInvImg.type());
-
-					dstTri[0] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING));
-					dstTri[1] = Point2f(subInvImg.cols*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_SPACING, 1), subInvImg.rows*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING));
-					dstTri[2] = Point2f(subInvImg.cols*Utilities::randomFloat(0, DEFORMATION_AMOUNT_SPACING), subInvImg.rows*Utilities::randomFloat(1 - DEFORMATION_AMOUNT_SPACING, 1));
-
-					warp_mat = getAffineTransform(srcTri, dstTri);
-
-					//warp_dst.setTo(255);
-					warpAffine(subInvImg, warp_dst, warp_mat, warp_dst.size());
-
-					bitwise_not(warp_dst, warp_dst);
-
-					//TODO vai vajag izt?r?t atmi?u??
-					int erosion_type;
-					int erosion_elem = 0 + (rand() % (int)(2 - 0 + 1));
-					int erosion_size = (0 + (rand() % (int)(2 - 0 + 1))) / 2; //66%, ka 0
-
-					Mat erosion_dst;
-					if (erosion_elem == 0) { erosion_type = MORPH_RECT; }
-					else if (erosion_elem == 1) { erosion_type = MORPH_CROSS; }
-					else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
-
-					Mat element = getStructuringElement(erosion_type,
-						Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-						Point(erosion_size, erosion_size));
-
-					erode(warp_dst, erosion_dst, element);
-
-					/*namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
-					imshow("MyWindow", erosion_dst);
-					waitKey(0);
-					destroyWindow("MyWindow");*/
-
-					resString = Utilities::convertImageToString(erosion_dst, true);
-				}
-				else {
-					resString = Utilities::convertImageToString(subImg, true);
-				}
-
-				if (typeRecords[i].letter == "1") {
-					resString += "\n1\n";
-				}
-				else {
-					resString += "\n-1\n";
-				}
-
-				sortingVector[Utilities::randomInt(0, SORTING_VECTOR_COUNT-1)].push_back(resString);
-			}
-
-			subImg.release();
-		}
-		img.release();
-
-		for (int i = 0; i < SORTING_VECTOR_COUNT; i++) {
-			while (!sortingVector[i].empty()) {
-				dataContent += sortingVector[i].back();
-				sortingVector[i].pop_back();
-			}
-		}
-
-		out << (recordsCount*repCount) << " " << inputSize << " " << 1 << "\n" << dataContent;
-		out.close();
-	}
-	cout << "Finished" << endl;
-}
-
+///Trenē neironu tīklu atstarpju atpazīšanai
 void NeuralNetwork::trainNN_spacing() {
+	const unsigned int max_epochs = 500000;
+	const unsigned int epochs_between_reports = 100;
 	const unsigned int num_input = INPUT_SIZE_SPACING;
 	const unsigned int num_output = 1;
 	const unsigned int num_layers = 4;
-	const float desired_error = (const float) 0.00001;
-	const unsigned int max_epochs = 500000;
-	const unsigned int epochs_between_reports = 100;
+	const float desired_error = (const float) 0.0000028;
 
 
-	unsigned int layers[num_layers] = { num_input, 3, 3, num_output };
+	unsigned int layers[num_layers] = { num_input, 10, 10, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
-	fann_randomize_weights(ann, -0.3, 0.3);
+	fann_randomize_weights(ann, -0.2, 0.2);
 
 	//FANN_ELLIOT_SYMMETRIC
 	//FANN_SIGMOID_SYMMETRIC
@@ -681,34 +686,104 @@ void NeuralNetwork::trainNN_spacing() {
 	fann_save(ann, "result_spacing.net");
 
 	fann_destroy(ann);
+	cout << "\a";
 }
 
+///Trenē neironu tīklu simbolu atpazīšanai
 void NeuralNetwork::trainNN_letters() {
-	const unsigned int num_input = INPUT_SIZE_LETTERS;
-	const unsigned int num_layers = 4;
 	const unsigned int max_epochs = 500000;
-	const unsigned int epochs_between_reports = 100;
-	const float desired_error = 0.0001;
+	const unsigned int epochs_between_reports = 10;
+	const unsigned int num_input = INPUT_SIZE_LETTERS;
+	const unsigned int num_output = SYMBOL_COUNT;
+	const unsigned int num_layers = 4;
+	const float desired_error = 0.000005;
 
 	cout << "Training..." << endl;
 
-	unsigned int layers[num_layers] = { num_input, 60, 60, SYMBOL_COUNT };
+	//150, 150, sigmoid, .00005
+	//140, 140, sigmoid, .00004
+	//130, 130, sigmoid, .00003
+	unsigned int layers[num_layers] = { num_input, 110, 110, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
-	fann_randomize_weights(ann, -0.3, 0.3);
+	fann_randomize_weights(ann, -0.2, 0.2);
+	//fann_set_activation_steepness_hidden(ann, 0.95);
+	//fann_set_learning_rate(ann, 0.95);
 
+	//FANN_ELLIOT_SYMMETRIC
+	//FANN_SIGMOID_SYMMETRIC
 	fann_set_activation_function_hidden(ann, FANN_ELLIOT_SYMMETRIC);
 	fann_set_activation_function_output(ann, FANN_ELLIOT_SYMMETRIC);
 
+	Utilities::setStartTime();
+
 	fann_train_on_file(ann, "train_letters.in", max_epochs, epochs_between_reports, desired_error);
-
 	fann_save(ann, "result_letters.net");
-
 	fann_destroy(ann);
 
+	Utilities::getTimePassed();
+
 	cout << "\a";
-	//getchar();
 }
 
+///Novērtē atstarpju atpazīšanas tīklu uz testa datiem
+void NeuralNetwork::testNN_spacing() {
+	cout << "Testing spacing..." << endl;
+	struct fann *ann = fann_create_from_file("result_spacing.net");
+	if (ann == NULL) {
+		cout << "ann IS NULL!!??" << endl;
+		return;
+	}
+
+	fann_type input[INPUT_SIZE_SPACING];
+	fann_type calc_out[1]; //TODO 1?
+	fann_type expected_out[1];
+
+	ifstream in("test_spacing.in");
+	string word;
+	in >> word;
+	int sampleCount = stoi(word);
+	in >> word;
+	int inputCount = stoi(word);
+	in >> word;
+	int outputCount = stoi(word);
+
+	int correctCount = 0;
+	for (int i = 0; i < sampleCount; i++) {
+		for (int j = 0; j < inputCount; j++) {
+			in >> word;
+			input[j] = stoi(word);
+		}
+		for (int j = 0; j < outputCount; j++) {
+			in >> word;
+			expected_out[j] = stoi(word);
+		}
+
+		int correctIdx = -1;
+		int currentLargestIdx = -1;
+		fann_type currentLargestValue = -1;
+		fann_type* tmp = fann_run(ann, input);
+		for (int k = 0; k < 1; k++) {
+			calc_out[k] = tmp[k];
+			if (calc_out[k] > currentLargestValue) {
+				currentLargestValue = calc_out[k];
+				currentLargestIdx = k;
+			}
+			//if (expected_out[k] == 1) {
+			//	correctIdx = k;
+			//}
+
+			cout << "Expected: " << expected_out[k] << " --- " << calc_out[k] << endl;
+		}
+
+		//if (currentLargestIdx == correctIdx)
+		//	correctCount++;
+	}
+	//cout << correctCount << "/" << sampleCount << " (" << correctCount / sampleCount << ")\n";
+
+	in.close();
+}
+
+///Novērtē simbolu atpazīšanas tīklu uz testa datiem
 void NeuralNetwork::testNN_letters() {
 	cout << "Testing letters..." << endl;
 	struct fann *ann = fann_create_from_file("result_letters.net");
@@ -777,65 +852,8 @@ void NeuralNetwork::testNN_letters() {
 	in.close();
 }
 
-void NeuralNetwork::testNN_spacing() {
-	cout << "Testing spacing..." << endl;
-	struct fann *ann = fann_create_from_file("result_spacing.net");
-	if (ann == NULL) {
-		cout << "ann IS NULL!!??" << endl;
-		return;
-	}
-
-	fann_type input[INPUT_SIZE_SPACING];
-	fann_type calc_out[1]; //TODO 1?
-	fann_type expected_out[1];
-
-	ifstream in("test_spacing.in");
-	string word;
-	in >> word;
-	int sampleCount = stoi(word);
-	in >> word;
-	int inputCount = stoi(word);
-	in >> word;
-	int outputCount = stoi(word);
-
-	int correctCount = 0;
-	for (int i = 0; i < sampleCount; i++) {
-		for (int j = 0; j < inputCount; j++) {
-			in >> word;
-			input[j] = stoi(word);
-		}
-		for (int j = 0; j < outputCount; j++) {
-			in >> word;
-			expected_out[j] = stoi(word);
-		}
-
-		int correctIdx = -1;
-		int currentLargestIdx = -1;
-		fann_type currentLargestValue = -1;
-		fann_type* tmp = fann_run(ann, input);
-		for (int k = 0; k < 1; k++) {
-			calc_out[k] = tmp[k];
-			if (calc_out[k] > currentLargestValue) {
-				currentLargestValue = calc_out[k];
-				currentLargestIdx = k;
-			}
-			//if (expected_out[k] == 1) {
-			//	correctIdx = k;
-			//}
-
-			cout << "Expected: " << expected_out[k] << " --- " << calc_out[k] << endl;
-		}
-
-		//if (currentLargestIdx == correctIdx)
-		//	correctCount++;
-	}
-	//cout << correctCount << "/" << sampleCount << " (" << correctCount / sampleCount << ")\n";
-
-	in.close();
-}
-
-void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb) {
-	struct fann *ann = fann_create_from_file("result_spacing.net");
+///Tīkls novērtē, vai attēlā ir atstarpe
+void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb, fann *ann) {
 	if (ann == NULL) {
 		cout << "ann IS NULL!!??" << endl;
 		return;
@@ -881,12 +899,12 @@ void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb
 	calcProb = tmp[currentLargestIdx];
 }
 
-void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb) {
+///Tīkls novērtē, kāds simbols ir attēlā
+SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
 	cout << "Testing image spacing..." << endl;
-	struct fann *ann = fann_create_from_file("result_letters.net");
 	if (ann == NULL) {
 		cout << "ann IS NULL!!??" << endl;
-		return;
+		return NULL;
 	}
 
 	fann_type input[INPUT_SIZE_LETTERS];
@@ -904,6 +922,8 @@ void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb)
 	string imgString = Utilities::convertImageToString(resizedImg, false);
 	//cout << imgString << endl << imgString.length() << endl;
 
+	resizedImg.release();
+
 	int correctCount = 0;
 	for (int j = 0; j < inputCount; j++) {
 		input[j] = imgString[j] - '0';
@@ -912,24 +932,34 @@ void NeuralNetwork::testNN_image_letter(Mat img, int &calcIdx, double &calcProb)
 		expected_out[j] = 0; //UNKNOWN
 	}
 
-	int currentLargestIdx = -1;
-	fann_type currentLargestValue = -1;
+	SymbolResult *result = new SymbolResult();
+
+	//atrod 3 ticamākos variantus
 	fann_type* tmp = fann_run(ann, input);
-	for (int k = 0; k < outputCount; k++) {
+	for (int k = 0; k < SYMBOL_COUNT; k++) {
 		calc_out[k] = tmp[k];
-		if (calc_out[k] > currentLargestValue) {
-			currentLargestValue = calc_out[k];
-			currentLargestIdx = k;
+		if (calc_out[k] > result->prob[0]) {
+			result->prob[2] = result->prob[1];
+			result->prob[1] = result->prob[0];
+			result->symbolIdxs[2] = result->symbolIdxs[1];
+			result->symbolIdxs[1] = result->symbolIdxs[0];
+
+			result->prob[0] = calc_out[k];
+			result->symbolIdxs[0] = k;
 		}
 	}
 
-	cout << "Calculated result: " << SYMBOLS[currentLargestIdx] << " (" << currentLargestValue << ")" << endl;
+	cout << "Calculated result:\n"
+		<< "1: " << SYMBOLS[result->symbolIdxs[0]] << " (" << result->prob[0] << ")\n";
+	if (result->symbolIdxs[1] > -1)
+		cout << "2: " << SYMBOLS[result->symbolIdxs[1]] << " (" << result->prob[1] << ")\n";
+	if (result->symbolIdxs[2] > -1)
+		cout << "3: " << SYMBOLS[result->symbolIdxs[2]] << " (" << result->prob[2] << ")\n";
 
-	calcIdx = currentLargestIdx;
-	calcProb = tmp[currentLargestIdx];
+	return result;
 }
 
-// Izsauc nepieciešam?s funkcijas OCR tren?šanai
+///Izsauc nepieciešamās funkcijas simbolu tīkla trenēšanai
 void NeuralNetwork::trainOCR_letters() {
 	completeSpritesheet_letters();
 	readDataset_letters();
@@ -964,6 +994,7 @@ void NeuralNetwork::trainOCR_letters_quicker() {
 	Utilities::getTimePassed();
 }
 
+///Izsauc nepieciešamās funkcijas atstarpju tīkla trenēšanai
 void NeuralNetwork::trainOCR_spacing() {
 	//completeSpritesheet_spacing();
 	readDataset_spacing();
@@ -974,6 +1005,14 @@ void NeuralNetwork::trainOCR_spacing() {
 	//readDataset_spacing(1);
 	//createNNData_spacing(1);
 	//testNN_spacing();
+}
+
+std::string NeuralNetwork::determineWord(std::vector<SymbolResult*> wordResults) {
+	for (int i = 0; i < wordResults.size(); i++) {
+		//TODO VALID_PROBABILITY
+	}
+
+	return "";
 }
 
 #endif

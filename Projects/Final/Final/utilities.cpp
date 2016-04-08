@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <random>
@@ -7,14 +7,17 @@
 using namespace std;
 using namespace cv;
 
+/// Uzstāda sākuma laiku tā mēŗīšanai
 void Utilities::setStartTime() {
 	startTime = clock();
 }
 
+///Iegūst pagājušo laiku kopš tā uzstādīšanas 
 void Utilities::getTimePassed() {
 	std::cout << "Time passed: " << (double(clock() - startTime) / CLOCKS_PER_SEC) << std::endl;
 }
 
+///Iegūst nejaušu veselu skaitli intervālā
 int Utilities::randomInt(int a, int b) {
 	std::random_device rd;
 	std::mt19937 rng(rd());
@@ -22,6 +25,7 @@ int Utilities::randomInt(int a, int b) {
 	return uni(rng);
 }
 
+///Iegūst nejaušu daļskaitli intervālā
 float Utilities::randomFloat(float a, float b) {
 	float random = ((float)rand()) / (float)RAND_MAX;
 	float diff = b - a;
@@ -29,6 +33,7 @@ float Utilities::randomFloat(float a, float b) {
 	return a + r;
 }
 
+///Pārveido attēlu par 1 un 0 virkni
 string Utilities::convertImageToString(Mat img, bool useSpaces) {
 	string trainingDataContent = "";
 	int inputSize = img.rows * img.cols;
@@ -48,27 +53,3 @@ string Utilities::convertImageToString(Mat img, bool useSpaces) {
 	//getchar();
 	return trainingDataContent;
 }
-
-//#ifndef _UTILITIES_
-//#define _UTILITIES_
-//
-//#include <iostream>
-//#include <ctime>
-//
-//using namespace std;
-//
-//
-//class Utilities {
-//public:
-//	static clock_t startTime;
-//
-//	static void setStartTime() {
-//		startTime = clock();
-//	}
-//
-//	static void getTimePassed() {
-//		cout << "Time passed: " << (double(clock() - startTime) / CLOCKS_PER_SEC) << endl;
-//	}
-//};
-//
-//#endif

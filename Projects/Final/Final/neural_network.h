@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <fstream>
@@ -26,18 +26,21 @@
 #define INPUT_SIZE_LETTERS LETTER_WIDTH*LETTER_HEIGHT //32x32
 #define INPUT_SIZE_SPACING SPACING_WIDTH*SPACING_HEIGHT //8x32
 
-//#define SYMBOL_COUNT 96
+#define SYMBOL_COUNT 85
+//#define SYMBOL_COUNT 99
 //#define SYMBOL_COUNT 4
 //#define SYMBOL_COUNT 33
 //#define SYMBOL_COUNT 10
-#define SYMBOL_COUNT 84
+//#define SYMBOL_COUNT 84
 
-#define TRANSFORMATION_COUNT_SPACING 1 //cik reizes katru bildi pievienos tren?�anas setam (ori?in?ls + pamain?tas)
-#define TRANSFORMATION_COUNT_LETTER 1
-#define DEFORMATION_AMOUNT_SPACING 0.11
-#define DEFORMATION_AMOUNT_LETTER 0.11
+#define TRANSFORMATION_COUNT_SPACING 1 //cik reizes katru bildi pievienos trenēšanas setam (oriģināls + pamainītas)
+#define TRANSFORMATION_COUNT_LETTER 4
+#define DEFORMATION_AMOUNT_SPACING 0.001
+#define DEFORMATION_AMOUNT_LETTER 0.007
 
 #define SORTING_VECTOR_COUNT 1000
+
+#define VALID_PROBABILITY 0.98
 
 class RecordInfo {
 public:
@@ -47,6 +50,22 @@ public:
 
 	RecordInfo() {
 		letter = "";
+	}
+};
+
+class SymbolResult {
+public:
+	int symbolIdxs[3]; //3 ticamāko simbolu indeksi simbolu masīvā
+	fann_type prob[3]; //3 ticamāko simbolu varbūtības
+
+	SymbolResult() {
+		symbolIdxs[0] = -1;
+		symbolIdxs[1] = -1;
+		symbolIdxs[2] = -1;
+
+		prob[0] = -1;
+		prob[1] = -1;
+		prob[2] = -1;
 	}
 };
 
@@ -75,10 +94,10 @@ public:
 
 	NeuralNetwork() {
 		/*SYMBOLS = new std::string[SYMBOL_COUNT] { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-			"A", "?", "B", "C", "?", "D", "E", "?", "F", "G", "?", "H", "I", "?", "J", "K", "?", "L", "?", "M", "N", "?", "O", "P", "R", "S", "�", "T", "U", "?", "V", "Z", "�",
-			"a", "?", "b", "c", "?", "d", "e", "?", "f", "g", "?", "h", "i", "?", "j", "k", "?", "l", "?", "m", "n", "?", "o", "p", "r", "s", "�", "t", "u", "?", "v", "z", "�",
+			"A", "?", "B", "C", "?", "D", "E", "?", "F", "G", "?", "H", "I", "?", "J", "K", "?", "L", "?", "M", "N", "?", "O", "P", "R", "S", "Š", "T", "U", "?", "V", "Z", "Ž",
+			"a", "?", "b", "c", "?", "d", "e", "?", "f", "g", "?", "h", "i", "?", "j", "k", "?", "l", "?", "m", "n", "?", "o", "p", "r", "s", "š", "t", "u", "?", "v", "z", "ž",
 			"Q", "q", "W", "w", "X", "x", "Y", "y",
-			".", ",", "!", "?", "-", "�", "$", "(", ")", "@", "[", "]"
+			".", ",", "!", "?", "-", "€", "$", "(", ")", "@", "[", "]"
 		};*/
 
 		//const string SYMBOLS[SYMBOL_COUNT] = {
@@ -86,7 +105,7 @@ public:
 		//};
 
 		//const string SYMBOLS[SYMBOL_COUNT] = {
-		//"a", "?", "b", "c", "?", "d", "e", "?", "f", "g", "?", "h", "i", "?", "j", "k", "?", "l", "?", "m", "n", "?", "o", "p", "r", "s", "�", "t", "u", "?", "v", "z", "�"
+		//"a", "?", "b", "c", "?", "d", "e", "?", "f", "g", "?", "h", "i", "?", "j", "k", "?", "l", "?", "m", "n", "?", "o", "p", "r", "s", "š", "t", "u", "?", "v", "z", "ž"
 		//};
 	}
 
@@ -95,11 +114,11 @@ public:
 	static void createNNData_spacing(int);
 	static void createNNData_letters(int);
 	static void trainNN_spacing();
+	static void testNN_spacing();
+	static void testNN_image_spacing(cv::Mat, int &idx, double &prob, fann *ann);
 	static void trainNN_letters();
 	static void testNN_letters();
-	static void testNN_image_letter(cv::Mat, int &idx, double &prob);
-	static void testNN_spacing();
-	static void testNN_image_spacing(cv::Mat, int &idx, double &prob);
+	static SymbolResult * testNN_image_letter(cv::Mat, fann *ann);
 	static void readDataset_letters(int);
 	static void readDataset_spacing(int);
 	static void completeSpritesheet_letters(int t = 0);
@@ -107,4 +126,5 @@ public:
 	static void trainOCR_letters_quicker();
 	static void trainOCR_spacing();
 	static void trainOCR_spacing_quicker();
+	static std::string determineWord(std::vector<SymbolResult*> wordResults);
 };
