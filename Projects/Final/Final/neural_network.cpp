@@ -14,87 +14,87 @@ using namespace std;
 using namespace cv;
 
 //create 1bpp images
-void NeuralNetwork::prepareTrainingData() {
-	SARRAY *safiles = getSortedPathnamesInDirectory(dirLettersTrainingSet.c_str(), NULL, 0, 0);
-	l_int32 nfiles = sarrayGetCount(safiles);
-
-	PIX *pixs, *pixt;
-	char targetPath[1024];
-	char newName[512];
-	string imgPath = "";
-
-	for (l_int32 i = 0; i < nfiles; i++) {
-		imgPath = sarrayGetString(safiles, i, 0);
-		if ((pixs = pixRead(imgPath.c_str())) == NULL) {
-			printf("image file %s not read\n", imgPath);
-			continue;
-		}
-
-		pixt = pixConvertTo1(pixs, 150);
-		sprintf_s(newName, "%s.%05d.png", "s", i);
-		sprintf_s(targetPath, "%s%s%s", dirLettersTrainingSet, "1bpp/", newName);
-		pixWrite(targetPath, pixt, IFF_PNG);
-
-		pixDestroy(&pixs);
-		pixDestroy(&pixt);
-	}
-	sarrayDestroy(&safiles);
-
-
-	safiles = getSortedPathnamesInDirectory(dirSpacingTrainingSet.c_str(), NULL, 0, 0);
-	nfiles = sarrayGetCount(safiles);
-
-	for (l_int32 i = 0; i < nfiles; i++) {
-		imgPath = sarrayGetString(safiles, i, 0);
-		if ((pixs = pixRead(imgPath.c_str())) == NULL) {
-			printf("image file %s not read\n", imgPath);
-			continue;
-		}
-
-		//TODO error when	 converting to 1bpp
-		pixt = pixConvertTo1(pixs, 150);
-		sprintf_s(newName, "%s.%05d.png", "s", i);
-		sprintf_s(targetPath, "%s%s%s", dirSpacingTrainingSet.c_str(), "1bpp/", newName);
-		pixWrite(targetPath, pixs, IFF_PNG);
-
-		pixDestroy(&pixs);
-		//pixDestroy(&pixt);
-	}
-	sarrayDestroy(&safiles);
-
-
-	cout << "Created 1bpp images of spacing images\n";
-}
-
-//create 1bb imagess
-void NeuralNetwork::prepareTestData() {
-	SARRAY *safiles = getSortedPathnamesInDirectory(dirSpacingTestSet.c_str(), NULL, 0, 0);
-	l_int32 nfiles = sarrayGetCount(safiles);
-
-	PIX *pixs, *pixt;
-	char targetPath[1024];
-	char newName[512];
-	string imgPath = "";
-
-	for (l_int32 i = 0; i < nfiles; i++) {
-		imgPath = sarrayGetString(safiles, i, 0);
-		if ((pixs = pixRead(imgPath.c_str())) == NULL) {
-			printf("image file %s not read\n", imgPath);
-			continue;
-		}
-
-		pixt = pixConvertTo1(pixs, 150);
-		sprintf_s(newName, "%s.%05d.png", "s", i);
-		sprintf_s(targetPath, "%s%s", dirSpacingTestSet, newName);
-		pixWrite(targetPath, pixt, IFF_PNG);
-
-		pixDestroy(&pixs);
-		pixDestroy(&pixt);
-	}
-	sarrayDestroy(&safiles);
-
-	cout << "Created 1bpp images of spacing test images\n";
-}
+//void NeuralNetwork::prepareTrainingData() {
+//	SARRAY *safiles = getSortedPathnamesInDirectory(dirLettersTrainingSet.c_str(), NULL, 0, 0);
+//	l_int32 nfiles = sarrayGetCount(safiles);
+//
+//	PIX *pixs, *pixt;
+//	char targetPath[1024];
+//	char newName[512];
+//	string imgPath = "";
+//
+//	for (l_int32 i = 0; i < nfiles; i++) {
+//		imgPath = sarrayGetString(safiles, i, 0);
+//		if ((pixs = pixRead(imgPath.c_str())) == NULL) {
+//			printf("image file %s not read\n", imgPath);
+//			continue;
+//		}
+//
+//		pixt = pixConvertTo1(pixs, 150);
+//		sprintf_s(newName, "%s.%05d.png", "s", i);
+//		sprintf_s(targetPath, "%s%s%s", dirLettersTrainingSet, "1bpp/", newName);
+//		pixWrite(targetPath, pixt, IFF_PNG);
+//
+//		pixDestroy(&pixs);
+//		pixDestroy(&pixt);
+//	}
+//	sarrayDestroy(&safiles);
+//
+//
+//	safiles = getSortedPathnamesInDirectory(dirSpacingTrainingSet.c_str(), NULL, 0, 0);
+//	nfiles = sarrayGetCount(safiles);
+//
+//	for (l_int32 i = 0; i < nfiles; i++) {
+//		imgPath = sarrayGetString(safiles, i, 0);
+//		if ((pixs = pixRead(imgPath.c_str())) == NULL) {
+//			printf("image file %s not read\n", imgPath);
+//			continue;
+//		}
+//
+//		//TODO error when	 converting to 1bpp
+//		pixt = pixConvertTo1(pixs, 150);
+//		sprintf_s(newName, "%s.%05d.png", "s", i);
+//		sprintf_s(targetPath, "%s%s%s", dirSpacingTrainingSet.c_str(), "1bpp/", newName);
+//		pixWrite(targetPath, pixs, IFF_PNG);
+//
+//		pixDestroy(&pixs);
+//		//pixDestroy(&pixt);
+//	}
+//	sarrayDestroy(&safiles);
+//
+//
+//	cout << "Created 1bpp images of spacing images\n";
+//}
+//
+////create 1bb imagess
+//void NeuralNetwork::prepareTestData() {
+//	SARRAY *safiles = getSortedPathnamesInDirectory(dirSpacingTestSet.c_str(), NULL, 0, 0);
+//	l_int32 nfiles = sarrayGetCount(safiles);
+//
+//	PIX *pixs, *pixt;
+//	char targetPath[1024];
+//	char newName[512];
+//	string imgPath = "";
+//
+//	for (l_int32 i = 0; i < nfiles; i++) {
+//		imgPath = sarrayGetString(safiles, i, 0);
+//		if ((pixs = pixRead(imgPath.c_str())) == NULL) {
+//			printf("image file %s not read\n", imgPath);
+//			continue;
+//		}
+//
+//		pixt = pixConvertTo1(pixs, 150);
+//		sprintf_s(newName, "%s.%05d.png", "s", i);
+//		sprintf_s(targetPath, "%s%s", dirSpacingTestSet, newName);
+//		pixWrite(targetPath, pixt, IFF_PNG);
+//
+//		pixDestroy(&pixs);
+//		pixDestroy(&pixt);
+//	}
+//	sarrayDestroy(&safiles);
+//
+//	cout << "Created 1bpp images of spacing test images\n";
+//}
 
 
 
@@ -669,12 +669,12 @@ void NeuralNetwork::trainNN_spacing() {
 	const unsigned int num_input = INPUT_SIZE_SPACING;
 	const unsigned int num_output = 1;
 	const unsigned int num_layers = 4;
-	const float desired_error = (const float) 0.0000028;
+	const float desired_error = (const float) 0.000005;
 
 
-	unsigned int layers[num_layers] = { num_input, 10, 10, num_output };
+	unsigned int layers[num_layers] = { num_input, 21, 21, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
-	fann_randomize_weights(ann, -0.2, 0.2);
+	fann_randomize_weights(ann, -0.1, 0.1);
 
 	//FANN_ELLIOT_SYMMETRIC
 	//FANN_SIGMOID_SYMMETRIC
@@ -696,23 +696,25 @@ void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_input = INPUT_SIZE_LETTERS;
 	const unsigned int num_output = SYMBOL_COUNT;
 	const unsigned int num_layers = 4;
-	const float desired_error = 0.000005;
+	const float desired_error = 0.00002;
 
 	cout << "Training..." << endl;
 
 	//150, 150, sigmoid, .00005
 	//140, 140, sigmoid, .00004
 	//130, 130, sigmoid, .00003
-	unsigned int layers[num_layers] = { num_input, 110, 110, num_output };
+	//240 sigmoid
+	//290
+	unsigned int layers[num_layers] = { num_input, 290, 290, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
-	fann_randomize_weights(ann, -0.2, 0.2);
+	fann_randomize_weights(ann, -0.1, 0.1);
 	//fann_set_activation_steepness_hidden(ann, 0.95);
 	//fann_set_learning_rate(ann, 0.95);
 
 	//FANN_ELLIOT_SYMMETRIC
 	//FANN_SIGMOID_SYMMETRIC
-	fann_set_activation_function_hidden(ann, FANN_ELLIOT_SYMMETRIC);
-	fann_set_activation_function_output(ann, FANN_ELLIOT_SYMMETRIC);
+	fann_set_activation_function_hidden(ann, FANN_SIGMOID_SYMMETRIC);
+	fann_set_activation_function_output(ann, FANN_SIGMOID_SYMMETRIC);
 
 	Utilities::setStartTime();
 
@@ -1008,11 +1010,13 @@ void NeuralNetwork::trainOCR_spacing() {
 }
 
 std::string NeuralNetwork::determineWord(std::vector<SymbolResult*> wordResults) {
+	std::string res = "";
 	for (int i = 0; i < wordResults.size(); i++) {
 		//TODO VALID_PROBABILITY
+		res += SYMBOLS[wordResults[i]->symbolIdxs[0]];
 	}
 
-	return "";
+	return res;
 }
 
 #endif

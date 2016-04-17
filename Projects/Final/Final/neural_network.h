@@ -11,8 +11,6 @@
 #include "opencv2\imgproc\imgproc.hpp"
 #include "opencv2\core\core.hpp"
 
-#include "allheaders.h"
-
 #include "fann.h"
 
 #include "dirent.h"
@@ -34,8 +32,8 @@
 //#define SYMBOL_COUNT 84
 
 #define TRANSFORMATION_COUNT_SPACING 1 //cik reizes katru bildi pievienos trenēšanas setam (oriģināls + pamainītas)
-#define TRANSFORMATION_COUNT_LETTER 4
-#define DEFORMATION_AMOUNT_SPACING 0.001
+#define TRANSFORMATION_COUNT_LETTER 1
+#define DEFORMATION_AMOUNT_SPACING 0.0001
 #define DEFORMATION_AMOUNT_LETTER 0.007
 
 #define SORTING_VECTOR_COUNT 1000
@@ -109,8 +107,8 @@ public:
 		//};
 	}
 
-	static void prepareTrainingData();
-	static void prepareTestData();
+	//static void prepareTrainingData();
+	//static void prepareTestData();
 	static void createNNData_spacing(int);
 	static void createNNData_letters(int);
 	static void trainNN_spacing();
@@ -125,6 +123,6 @@ public:
 	static void trainOCR_letters();
 	static void trainOCR_letters_quicker();
 	static void trainOCR_spacing();
-	static void trainOCR_spacing_quicker();
+	//static void trainOCR_spacing_quicker();
 	static std::string determineWord(std::vector<SymbolResult*> wordResults);
 };

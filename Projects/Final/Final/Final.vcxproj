@@ -28,7 +28,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -91,17 +91,17 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>..\..\..\FANN\fann\src\include;..\..\..\FANN\fann\lib\gtest-1.6.0\include;$(OPENCV_DIR)\include;..\..\..\leptonica\include\leptonica;..\..\..\leptonica\include;..\..\..\sqlite;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\FANN\fann\src\include;..\..\..\FANN\fann\lib\gtest-1.6.0\include;$(OPENCV_DIR)\include;..\..\..\sqlite;F:\SRILM\lm\src;F:\SRILM\misc\src;F:\SRILM\dstruct\src;F:\SRILM\flm\src;F:\SRILM\zlib\src;F:\SRILM\lattice\src</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(OPENCV_DIR)\x86\vc12\lib;..\..\..\leptonica\lib;..\..\..\sqlite;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_ts300d.lib;opencv_world300d.lib;opencv_ts300.lib;opencv_world300.lib;liblept168.lib;liblept168d.lib;giflib416-static-mtdll.lib;libjpeg8c-static-mtdll.lib;libpng143-static-mtdll.lib;libtiff394-static-mtdll.lib;zlib125-static-mtdll.lib;liblept168-static-mtdll.lib;sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OPENCV_DIR)\x86\vc12\lib;..\..\..\sqlite;F:\SRILM\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_ts300d.lib;opencv_world300d.lib;opencv_ts300.lib;opencv_world300.lib;sqlite3.lib;dstruct.lib;flm.lib;misc.lib;oolm.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="image_processing.cpp" />
+    <ClCompile Include="language_model.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="neural_network.cpp" />
     <ClCompile Include="utilities.cpp" />
@@ -166,13 +167,30 @@
   <ItemGroup>
     <ClInclude Include="dirent.h" />
     <ClInclude Include="image_processing.h" />
+    <ClInclude Include="language_model.h" />
     <ClInclude Include="neural_network.h" />
+    <ClInclude Include="srilm.h" />
     <ClInclude Include="utf8.h" />
     <ClInclude Include="utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\FANN\fann\VS2010\fannfloat\fannfloat.vcxproj">
       <Project>{2f0ec4b6-b3f8-4a05-a884-b935e82e1390}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SRILM\visual_studio\vs2005\lib_dstruct\dstruct.vcxproj">
+      <Project>{e5a7a71b-6a5f-453e-994a-4d5750a34274}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SRILM\visual_studio\vs2005\lib_flm\flm.vcxproj">
+      <Project>{447cb638-6655-41e0-a0ca-27e572ce403d}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SRILM\visual_studio\vs2005\lib_misc\misc.vcxproj">
+      <Project>{c62ccb54-397c-4da7-94fe-e730f1592ea1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SRILM\visual_studio\vs2005\lib_oolm\oolm.vcxproj">
+      <Project>{e8584e80-48bd-44bf-b1ae-89692ba464a0}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\SRILM\visual_studio\vs2005\lib_z\z.vcxproj">
+      <Project>{ce78e55e-8de6-4a37-a092-721233412a4a}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

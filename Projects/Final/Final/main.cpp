@@ -1,6 +1,7 @@
 ﻿#ifndef _MAIN_
 #define _MAIN_
 
+
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -8,6 +9,7 @@
 
 #include "image_processing.h"
 #include "neural_network.h"
+//#include "language_model.h"
 #include "utilities.h"
 
 #include "utf8.h"
@@ -67,7 +69,13 @@ RecordInfo* NeuralNetwork::testRecords_spacing;
 
 clock_t Utilities::startTime;
 
+
 int main() {
+	//LanguageModel::getProbability();
+	cout << "SUCCESS!" << endl;
+	getchar();
+	
+
 	BOOL ret = SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
 
 	srand(time(NULL));
@@ -99,7 +107,7 @@ int main() {
 				"t - TRAIN QUICK\n" <<
 				"Make a choice: ";
 		//cin >> c;
-		c = 'i';
+		c = 'j';
 
 		Mat source;
 
@@ -108,8 +116,8 @@ int main() {
 			NeuralNetwork::trainOCR_spacing();
 			break;
 		case '2':
-			NeuralNetwork::prepareTrainingData();
-			NeuralNetwork::prepareTestData();
+			//NeuralNetwork::prepareTrainingData();
+			//NeuralNetwork::prepareTestData();
 			break;
 		case '3':
 			NeuralNetwork::createNNData_letters(0);
@@ -142,19 +150,20 @@ int main() {
 			source.release();
 			break;
 		case 'j':
-			NeuralNetwork::trainOCR_letters();
+			//NeuralNetwork::trainOCR_letters();
 			source = imread("../../../images/iteration_test_5.png");
 			ImageProcessing::iterateOverImage(source);
 			source.release();
 			break;
 		case 'k':
+			//NeuralNetwork::trainOCR_spacing();
 			ImageProcessing::findWords_cv("../../../images/pages/word_finding_1.png");
 			break;
 		case 'l':
 			ImageProcessing::cutWords();
 			break;
 		case 'b':
-			ImageProcessing::convertTo1bpp("../../../images/learning/letters/training-set/");
+			//ImageProcessing::convertTo1bpp("../../../images/learning/letters/training-set/");
 			break;
 		default:
 			cleanup();

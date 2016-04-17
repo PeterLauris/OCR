@@ -6,8 +6,6 @@
 #include "opencv2\imgproc\imgproc.hpp"
 #include "opencv2\core\core.hpp"
 
-#include "allheaders.h"
-
 #include "fann.h"
 
 #include "dirent.h"

@@ -1,4 +1,3 @@
-#include "allheaders.h"
 #include <stdlib.h>
 #include <string>
 
@@ -6,7 +5,7 @@
 #include "opencv2\imgproc\imgproc.hpp"
 #include "opencv2\core\core.hpp"
 
-#include "allheaders.h"
+//#include "allheaders.h"
 
 #include "fann.h"
 
@@ -64,7 +63,8 @@
 #define BGVAL_MIDDLE			186
 #define BGVAL_DELTA				30
 
-#define MIN_SPACING_PROBABILITY 0.8
+#define MIN_SPACING_PROBABILITY 0.95
+#define SPACE_MIN_SPACING_COUNT 6
 #define ALLOWED_ITERATION_ERROR 1
 
 
@@ -85,20 +85,20 @@ public:
 
 class ImageProcessing {
 public:
-	static l_int32 getLightingBGval(PIX *pixs);
-	static l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  format);
-	static PIX * normalizeLighting(PIX *pixs, l_int32 *lightingVal);
-	static PIX * removeNoise(PIX *pixs, l_int32 *lightingVal);
-	static void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal);
-	static PIX * removeImages(PIX *pixs);
-	static PIX * findWords(PIX *pixt1, BOXAA *baa, NUMAA *naa);
+	//static l_int32 getLightingBGval(PIX *pixs);
+	//static l_int32 light_pixDisplayWriteFormat(PIX *pixs, l_int32  reduction, l_int32  format);
+	//static PIX * normalizeLighting(PIX *pixs, l_int32 *lightingVal);
+	//static PIX * removeNoise(PIX *pixs, l_int32 *lightingVal);
+	//static void PixAddEdgeData(PIXA *pixa, PIX *pixs, l_int32 side, l_int32 minjump, l_int32  minreversal);
+	//static PIX * removeImages(PIX *pixs);
+	//static PIX * findWords(PIX *pixt1, BOXAA *baa, NUMAA *naa);
 	static void findWords_cv(std::string);
-	static void writeWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr);
-	static void findWords2(char* dirin, char *dirout);
+	//static void writeWords(PIX *pixs, char *dirout, char *rootname, l_int32 nr);
+	//static void findWords2(char* dirin, char *dirout);
 	static void iterateOverImage(cv::Mat);
 	static cv::Mat prepareImage(cv::Mat subImg);
 	static void cutWords();
-	static void convertTo1bpp(std::string src);
+	//static void convertTo1bpp(std::string src);
 	static std::vector<cv::Rect> detectLetters(cv::Mat img);
 	static void testFoundSymbols(cv::Mat source, std::vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth);
 };

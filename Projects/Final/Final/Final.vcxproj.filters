@@ -27,6 +27,9 @@
     <ClCompile Include="utilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="language_model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dirent.h">
@@ -42,6 +45,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="image_processing.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="srilm.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="language_model.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
