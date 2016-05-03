@@ -2,7 +2,9 @@
 
 #include <iostream>
 #include <random>
+
 #include "utilities.h"
+#include "neural_network.h"
 
 using namespace std;
 using namespace cv;
@@ -52,4 +54,33 @@ string Utilities::convertImageToString(Mat img, bool useSpaces) {
 	delete[] arr;
 	//getchar();
 	return trainingDataContent;
+}
+
+string Utilities::convertImageToString_binary(Mat img, bool useSpaces) {
+	string trainingDataContent = "";
+	int inputSize = img.rows * img.cols;
+	int *arr = new int[inputSize];
+	for (int y = 0; y < img.rows; y++) {
+		for (int x = 0; x < img.cols; x++) {
+			int pix = (int)img.at<uchar>(y, x);
+			int t = (pix <= 128 ? 0 : 1);
+			arr[y*img.cols + x] = t;
+			trainingDataContent = trainingDataContent + to_string(t);
+			if (useSpaces) trainingDataContent += " ";
+			//cout << t << " ";
+		}
+		//cout << "\n";
+	}
+	delete[] arr;
+	//cout << trainingDataContent << endl;
+	//getchar();
+	return trainingDataContent;
+}
+
+string Utilities::wordToString(std::vector<SymbolResult*> word, int *choiceIdxs) {
+	string res = "";
+	for (int i = 0; i < word.size(); i++) {
+		res += NeuralNetwork::SYMBOLS[word[i]->symbolIdxs[choiceIdxs[i]]];
+	}
+	return res;
 }

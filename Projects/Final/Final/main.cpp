@@ -9,7 +9,7 @@
 
 #include "image_processing.h"
 #include "neural_network.h"
-//#include "language_model.h"
+#include "language_model.h"
 #include "utilities.h"
 
 #include "utf8.h"
@@ -44,20 +44,20 @@ BOOL WINAPI ConsoleHandlerRoutine(DWORD dwCtrlType)
 }
 
 std::string* NeuralNetwork::SYMBOLS = new std::string[SYMBOL_COUNT];/*{ "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-"A", "Ā", "B", "C", "Č", "D", "E", "Ē", "F", "G", "Ģ", "H", "I", "Ī", "J", "K", "Ķ", "L", "Ļ", "M", "N", "Ņ", "O", "P", "R", "S", "Š", "T", "U", "Ū", "V", "Z", "Ž",
-"a", "ā", "b", "c", "č", "d", "e", "ē", "f", "g", "ģ", "h", "i", "ī", "j", "k", "Ķ", "l", "ļ", "m", "n", "ņ", "o", "p", "r", "s", "š", "t", "u", "ū", "v", "z", "ž",
-"Q", "q", "W", "w", "X", "x", "Y", "y"
-}*/;
+																	"A", "Ā", "B", "C", "Č", "D", "E", "Ē", "F", "G", "Ģ", "H", "I", "Ī", "J", "K", "Ķ", "L", "Ļ", "M", "N", "Ņ", "O", "P", "R", "S", "Š", "T", "U", "Ū", "V", "Z", "Ž",
+																	"a", "ā", "b", "c", "č", "d", "e", "ē", "f", "g", "ģ", "h", "i", "ī", "j", "k", "Ķ", "l", "ļ", "m", "n", "ņ", "o", "p", "r", "s", "š", "t", "u", "ū", "v", "z", "ž",
+																	"Q", "q", "W", "w", "X", "x", "Y", "y"
+																	}*/;
 
 
-std::string NeuralNetwork::dirLettersTrainingSet				=	"../../../images/learning/letters/training-set/";
-std::string NeuralNetwork::dirSpacingTrainingSet				=	"../../../images/learning/spacing/narrow/training-set/";
-std::string NeuralNetwork::dirSpacingTestSet					=	"../../../images/learning/spacing/narrow/test/1bpp/";
+std::string NeuralNetwork::dirLettersTrainingSet = "../../../images/learning/letters/training-set/";
+std::string NeuralNetwork::dirSpacingTrainingSet = "../../../images/learning/spacing/narrow/training-set/";
+std::string NeuralNetwork::dirSpacingTestSet = "../../../images/learning/spacing/narrow/test/1bpp/";
 
-std::string NeuralNetwork::dirLettersTrainingSpritemap			=	"../../../images/learning/letters/training-set-spritesheet.png";
-std::string NeuralNetwork::dirLettersTestSpritemap				=	"../../../images/learning/letters/test-set-spritesheet.png";
-std::string NeuralNetwork::dirSpacingTrainingSpritemap			=	"../../../images/learning/spacing/narrow/training-set-spritesheet.png";
-std::string NeuralNetwork::dirSpacingTestSpritemap				=	"../../../images/learning/spacing/narrow/test-set-spritesheet.png";
+std::string NeuralNetwork::dirLettersTrainingSpritemap = "../../../images/learning/letters/training-set-spritesheet.png";
+std::string NeuralNetwork::dirLettersTestSpritemap = "../../../images/learning/letters/test-set-spritesheet.png";
+std::string NeuralNetwork::dirSpacingTrainingSpritemap = "../../../images/learning/spacing/narrow/training-set-spritesheet.png";
+std::string NeuralNetwork::dirSpacingTestSpritemap = "../../../images/learning/spacing/narrow/test-set-spritesheet.png";
 //std::string NeuralNetwork::dirSpacingValidTrainingSpritemap;
 //std::string NeuralNetwork::dirSpacingInvalidTrainingSpritemap;
 
@@ -66,22 +66,25 @@ RecordInfo* NeuralNetwork::trainingRecords_letters;
 RecordInfo* NeuralNetwork::testRecords_letters;
 RecordInfo* NeuralNetwork::trainingRecords_spacing;
 RecordInfo* NeuralNetwork::testRecords_spacing;
+Ngram* LanguageModel::ngramLM;
+LM* LanguageModel::useLM;
 
 clock_t Utilities::startTime;
 
 
-int main() {
-	//LanguageModel::getProbability();
-	cout << "SUCCESS!" << endl;
-	getchar();
-	
 
-	BOOL ret = SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
+int main() {
+	//LanguageModel::ngramLM = NULL;
+	//LanguageModel::useLM = NULL;
+	//LanguageModel::getProbability();
+
+
+	//BOOL ret = SetConsoleCtrlHandler(ConsoleHandlerRoutine, TRUE);
 
 	srand(time(NULL));
 
 	/*for (int i = 0; i < 10; i++) {
-		cout << Utilities::randomInt(0, 9) << endl;
+	cout << Utilities::randomInt(0, 9) << endl;
 	}*/
 
 	ifstream in;
@@ -95,29 +98,38 @@ int main() {
 	char c;
 	do {
 		cout << "### OCR ###\n" <<
-				"1 - run OCR on sample data\n" <<
-				"2 - prepare training and test data\n" <<
-				"3 - create training data\n" <<
-				"4 - create test data\n" <<
-				"5 - train neural network\n" <<
-				"6 - test neural network\n" <<
-				"d - create dataset\n" <<
-				"s - complete spritemap\n" <<
-				"r - TRAIN\n" <<
-				"t - TRAIN QUICK\n" <<
-				"Make a choice: ";
+			"1 - test\n" <<
+			"Make a choice: ";
 		//cin >> c;
-		c = 'j';
+		c = 'i';
 
-		Mat source;
+		Mat source, tmp;
+		std::vector<cv::Rect> letterBoxes;
 
 		switch (c) {
 		case '1':
-			NeuralNetwork::trainOCR_spacing();
+			source = imread("../../../images/pages/piemers.png");
+			//ImageProcessing::showImage(source, "Original");
+			source = ImageProcessing::setContrast(source);
+			source = ImageProcessing::removeNoise(source);
+			source = ImageProcessing::deskewImage(source);
+			//imwrite("tmp.jpg", source);
+			//source = imread("tmp.jpg");
+			tmp = source.clone();
+			letterBoxes = ImageProcessing::detectLetters(source);
+			cout << "Word boxes found: " << letterBoxes.size() << endl;
+			for (int i = 0; i < letterBoxes.size(); i++) {
+				//rectangle(tmp, letterBoxes[i], Scalar(0, 0, 0), 2);
+				Mat subImg = tmp(letterBoxes[i]);
+				ImageProcessing::iterateOverImage(subImg);
+				//ImageProcessing::showImage(subImg, "Cutout SubImg");
+				subImg.release();
+			}
+			ImageProcessing::showImage(tmp, "Result 1");
+			//imwrite("tmp.jpg", tmp);
 			break;
 		case '2':
-			//NeuralNetwork::prepareTrainingData();
-			//NeuralNetwork::prepareTestData();
+			ImageProcessing::findWords_cv(source);
 			break;
 		case '3':
 			NeuralNetwork::createNNData_letters(0);
@@ -145,19 +157,20 @@ int main() {
 			break;
 		case 'i':
 			NeuralNetwork::trainOCR_spacing();
-			source = imread("../../../images/iteration_test_5.png");
+			source = imread("../../../images/iteration_test_6.png", CV_8UC1);
+			ImageProcessing::showImage(source);
 			ImageProcessing::iterateOverImage(source);
 			source.release();
 			break;
 		case 'j':
-			//NeuralNetwork::trainOCR_letters();
-			source = imread("../../../images/iteration_test_5.png");
+			NeuralNetwork::trainOCR_letters();
+			source = imread("../../../images/iteration_test_6.png");
 			ImageProcessing::iterateOverImage(source);
 			source.release();
 			break;
 		case 'k':
 			//NeuralNetwork::trainOCR_spacing();
-			ImageProcessing::findWords_cv("../../../images/pages/word_finding_1.png");
+			//ImageProcessing::findWords_cv("../../../images/pages/word_finding_1.png");
 			break;
 		case 'l':
 			ImageProcessing::cutWords();

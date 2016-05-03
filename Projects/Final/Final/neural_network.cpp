@@ -7,6 +7,7 @@
 #include <ctime>
 
 #include "neural_network.h"
+#include "image_processing.h"
 #include "utilities.h"
 
 
@@ -459,10 +460,7 @@ void NeuralNetwork::createNNData_spacing(int type = 0) {
 
 					erode(warp_dst, erosion_dst, element);
 
-					/*namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
-					imshow("MyWindow", erosion_dst);
-					waitKey(0);
-					destroyWindow("MyWindow");*/
+					//ImageProcessing::showImage(erosion_dst);
 
 					resString = Utilities::convertImageToString(erosion_dst, true);
 				}
@@ -591,16 +589,13 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 					else if (erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
 
 					Mat element = getStructuringElement(erosion_type,
-						Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+						Size(erosion_size + 1, erosion_size + 1),
 						Point(erosion_size, erosion_size));
 
-					erode(warp_dst, erosion_dst, element);
+					erosion_dst = warp_dst;
+					//erode(warp_dst, erosion_dst, element);
+					
 					//dilate pagaid?m neizmantoju, jo burti p?r?k v?ji
-
-					/*namedWindow("ErodeWindow", CV_WINDOW_AUTOSIZE);
-					imshow("ErodeWindow", erosion_dst);
-					waitKey(0);
-					destroyWindow("ErodeWindow");*/
 
 					// Apply the erosion operation
 					//erode(warp_dst, erosion_dst, element);
@@ -639,11 +634,7 @@ void NeuralNetwork::createNNData_letters(int type = 0) {
 
 				sortingVector[Utilities::randomInt(0, SORTING_VECTOR_COUNT - 1)].push_back(resString);
 			}
-
-			/*namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
-			imshow("MyWindow", subImg);
-			waitKey(0);
-			destroyWindow("MyWindow");*/
+			//ImageProcessing::showImage(subImg);
 
 			subImg.release();
 		}
@@ -696,7 +687,7 @@ void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_input = INPUT_SIZE_LETTERS;
 	const unsigned int num_output = SYMBOL_COUNT;
 	const unsigned int num_layers = 4;
-	const float desired_error = 0.00002;
+	const float desired_error = 0.000021;
 
 	cout << "Training..." << endl;
 
@@ -705,7 +696,8 @@ void NeuralNetwork::trainNN_letters() {
 	//130, 130, sigmoid, .00003
 	//240 sigmoid
 	//290
-	unsigned int layers[num_layers] = { num_input, 290, 290, num_output };
+	//430
+	unsigned int layers[num_layers] = { num_input, 441, 441, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.1, 0.1);
 	//fann_set_activation_steepness_hidden(ann, 0.95);
@@ -873,7 +865,7 @@ void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb
 	int inputCount = INPUT_SIZE_SPACING;
 	int outputCount = 1;
 
-	string imgString = Utilities::convertImageToString(resizedImg, false);
+	string imgString = Utilities::convertImageToString_binary(resizedImg, false);
 	//cout << imgString << endl;
 
 	int correctCount = 0;
@@ -899,11 +891,14 @@ void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb
 
 	calcIdx = (tmp[currentLargestIdx] >= 0 ? 1 : 0);
 	calcProb = tmp[currentLargestIdx];
+
+
+	//cout << "Calc prob: " << calcProb << endl;
+	//ImageProcessing::showImage(resizedImg);
 }
 
 ///Tīkls novērtē, kāds simbols ir attēlā
 SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
-	cout << "Testing image spacing..." << endl;
 	if (ann == NULL) {
 		cout << "ann IS NULL!!??" << endl;
 		return NULL;
@@ -921,7 +916,7 @@ SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
 	int inputCount = INPUT_SIZE_LETTERS;
 	int outputCount = SYMBOL_COUNT;
 
-	string imgString = Utilities::convertImageToString(resizedImg, false);
+	string imgString = Utilities::convertImageToString_binary(resizedImg, false);
 	//cout << imgString << endl << imgString.length() << endl;
 
 	resizedImg.release();
@@ -1007,16 +1002,6 @@ void NeuralNetwork::trainOCR_spacing() {
 	//readDataset_spacing(1);
 	//createNNData_spacing(1);
 	//testNN_spacing();
-}
-
-std::string NeuralNetwork::determineWord(std::vector<SymbolResult*> wordResults) {
-	std::string res = "";
-	for (int i = 0; i < wordResults.size(); i++) {
-		//TODO VALID_PROBABILITY
-		res += SYMBOLS[wordResults[i]->symbolIdxs[0]];
-	}
-
-	return res;
 }
 
 #endif
