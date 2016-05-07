@@ -6,10 +6,8 @@
 #include <algorithm>
 #include <ctime>
 #include <sstream>
-
 #include "language_model.h"
 #include "utilities.h"
-
 
 using namespace std;
 
@@ -43,7 +41,8 @@ double LanguageModel::getCredibility(std::vector<SymbolResult*> word, int* choic
 
 double LanguageModel::getCredibilityLM(std::string word) {
 	if (useLM == NULL) {
-		cout << "LM not prepared!\n";
+		//cout << "LM not prepared!\n";
+		return 1;
 		prepareLM();
 	}
 

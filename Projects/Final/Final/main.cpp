@@ -68,6 +68,7 @@ RecordInfo* NeuralNetwork::trainingRecords_spacing;
 RecordInfo* NeuralNetwork::testRecords_spacing;
 Ngram* LanguageModel::ngramLM;
 LM* LanguageModel::useLM;
+int ImageProcessing::outputNr = 0;
 
 clock_t Utilities::startTime;
 
@@ -101,13 +102,15 @@ int main() {
 			"1 - test\n" <<
 			"Make a choice: ";
 		//cin >> c;
-		c = 'i';
+		c = '1';
 
 		Mat source, tmp;
 		std::vector<cv::Rect> letterBoxes;
 
 		switch (c) {
 		case '1':
+			//NeuralNetwork::trainOCR_spacing();
+			//NeuralNetwork::trainOCR_letters();
 			source = imread("../../../images/pages/piemers.png");
 			//ImageProcessing::showImage(source, "Original");
 			source = ImageProcessing::setContrast(source);
@@ -121,8 +124,8 @@ int main() {
 			for (int i = 0; i < letterBoxes.size(); i++) {
 				//rectangle(tmp, letterBoxes[i], Scalar(0, 0, 0), 2);
 				Mat subImg = tmp(letterBoxes[i]);
-				ImageProcessing::iterateOverImage(subImg);
-				//ImageProcessing::showImage(subImg, "Cutout SubImg");
+				ImageProcessing::iterateOverImage(subImg.clone());
+				ImageProcessing::showImage(subImg, "Cutout SubImg");
 				subImg.release();
 			}
 			ImageProcessing::showImage(tmp, "Result 1");

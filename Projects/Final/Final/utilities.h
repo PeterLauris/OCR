@@ -12,6 +12,8 @@
 
 #include "utf8.h"
 
+#define MIN_BLACK_PIXELS 6
+
 class RecordInfo {
 public:
 	int x;
@@ -47,7 +49,7 @@ public:
 	static int randomInt(int, int);
 	static float randomFloat(float, float);
 	static std::string wordToString(std::vector<SymbolResult*>, int*);
-
+	static bool isImageEmpty(cv::Mat);
 	static std::string convertImageToString(cv::Mat img, bool useSpaces);
 	static std::string convertImageToString_binary(cv::Mat img, bool useSpaces);
 };

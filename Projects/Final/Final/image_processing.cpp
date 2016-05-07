@@ -13,6 +13,15 @@
 using namespace std;
 using namespace cv;
 
+void print(Mat img) {
+	for (int y = 0; y < img.rows; y++) {
+		for (int x = 0; x < img.cols; x++) {
+			int pix = (int)img.at<uchar>(y, x);
+			cout << pix << " ";
+		}
+		cout << "\n";
+	}
+}
 
 ///Sagatvo burta attēlu atpazīšanai
 ///Atrod burtu, nocentrē to
@@ -23,13 +32,25 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	//cvtColor(subImg, mSource_Gray, COLOR_BGR2GRAY);
 	//threshold(mSource_Gray, mThreshold, 254, 255, THRESH_BINARY_INV);
 
-	Mat Points;
+	subImg = removeNoiseBlobs(subImg);
+
+	Mat Points, tmp;
+	bitwise_not(subImg, subImg);
 	findNonZero(subImg, Points);
+	if (Points.empty()) {
+		cout << "Points are empty!!!";
+		//showImage(subImg);
+		return Mat();
+	}
 	Rect Min_Rect = boundingRect(Points);
 
-	//rectangle(subImg, Min_Rect.tl(), Min_Rect.br(), Scalar(0, 255, 0), 2);
+	bitwise_not(subImg, subImg);
 
-	Mat tmp = subImg(Min_Rect);
+	//tmp = subImg.clone();
+	//rectangle(tmp, Min_Rect.tl(), Min_Rect.br(), Scalar(0, 255, 0), 2);
+	//showImage(tmp);
+
+	tmp = subImg(Min_Rect);
 	subImg.release();
 	subImg = tmp;
 
@@ -58,13 +79,14 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	subImg.release();
 	subImg = padded;
 
-	bitwise_not(subImg, tmp);
-	subImg.release();
-	subImg = tmp;
+	bitwise_not(subImg, subImg);
 
-	resize(subImg, tmp, Size(LETTER_WIDTH, LETTER_HEIGHT));
-	subImg.release();
-	subImg = tmp;
+	resize(subImg, subImg, Size(LETTER_WIDTH, LETTER_HEIGHT));
+
+	subImg = convertImageToBinary(subImg);
+
+	//print(subImg);
+	//getchar();
 
 	Points.release();
 	mThreshold.release();
@@ -76,22 +98,36 @@ void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spa
 	ofstream out("results.txt");
 	std::vector<SymbolResult*> wordResults;
 	int prevGroupX = 0;
-	int nr = 0;
+	//int nr = 0;
 	cout << "Image height: " << source.rows << endl;
 	//showImage(source);
+	bool isSpacingLast = false;//vai vārda beigās ir atstarpes
 	struct fann *ann = fann_create_from_file("result_letters.net");
 	for (int i = 0; i < spacingGroups.size(); i++) {
-		if (spacingGroups[i]->groupSize > 1) { //spacing group is valid
+		int currGroupEndX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth); //iegūst spacing beigas
+		cout << source.cols << " " << currGroupEndX << endl;
+		if (currGroupEndX == source.cols) {
+			isSpacingLast = true;
+		}
 
-			int currGroupX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth) / 2.0;
+		if (spacingGroups[i]->groupSize >= 1) { //spacing group is valid
+			int currGroupX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth) / 2.0; //iegūst spacing vidu
 
 			if (spacingGroups[i]->startX > 0) { //ja grupa nav paš? v?rda s?kum?
 				//cout << "Xs: " << prevGroupX << " " << currGroupX << endl;
 				Mat subImg = source(cv::Range(0, source.rows), cv::Range(prevGroupX, currGroupX));
 				//cout << "S: " << subImg.rows << " " << subImg.cols << endl;
-				Mat tmp = prepareImage(subImg);
-				subImg.release();
-				subImg = tmp;
+				subImg = convertImageToBinary(subImg);
+				if (Utilities::isImageEmpty(subImg)) {
+					continue;
+				}
+				subImg = prepareImage(subImg);
+				//subImg = convertImageToBinary(subImg);
+				//subImg = removeNoiseBlobs(subImg);
+				if (Utilities::isImageEmpty(subImg)) {
+					continue;
+				}
+				//subImg = prepareImage(subImg);
 
 				if (subImg.cols == 0 || subImg.rows == 0) {
 					subImg.release();
@@ -99,14 +135,14 @@ void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spa
 				}
 
 				SymbolResult *result = NeuralNetwork::testNN_image_letter(subImg, ann);
-				wordResults.push_back(result);
-
-				//showImage(subImg, "Cutout SubImg");
-
-				string name = "../../../images/results/spacing/r_" + to_string(nr) + ".jpg";
-				imwrite(name, subImg);
-				subImg.release();
-				nr++;
+				if (result != NULL) {
+					wordResults.push_back(result);
+					//showImage(subImg, "Cutout SubImg");
+					string name = "../../../images/results/spacing/r_" + to_string(outputNr) + ".jpg";
+					imwrite(name, subImg);
+					subImg.release();
+					outputNr++;
+				}
 			}
 			//TODO uncomment
 			//if (spacingGroups[i]->groupSize > SPACE_MIN_SPACING_COUNT) { //there is a space between the letters
@@ -124,21 +160,30 @@ void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spa
 	}
 	//parbauda arī pēdējo simbolu, aiz kura nav atstarpe
 	Mat subImg = source(cv::Range(0, source.rows), cv::Range(prevGroupX, source.cols));
-	Mat tmp = prepareImage(subImg);
-	subImg.release();
-	subImg = tmp;
-	//TODO memory leak?
-	//cout << subImg.cols << " " << subImg.rows << endl;
-
-	if (subImg.cols == 0 || subImg.rows == 0) {
-		subImg.release();
+	if (Utilities::isImageEmpty(subImg)) {
+		
 	}
 	else {
-		SymbolResult *result = NeuralNetwork::testNN_image_letter(subImg, ann);
-		wordResults.push_back(result);
-		string name = "../../../images/results/spacing/r_" + to_string(nr) + ".jpg";
-		imwrite(name, subImg);
+		Mat tmp = prepareImage(subImg);
 		subImg.release();
+		subImg = tmp;
+		//TODO memory leak?
+		//cout << subImg.cols << " " << subImg.rows << endl;
+
+		if (subImg.cols == 0 || subImg.rows == 0 || isSpacingLast) {
+			cout << "Invalid (empty) letter image" << endl;
+			subImg.release();
+		}
+		else {
+			SymbolResult *result = NeuralNetwork::testNN_image_letter(subImg, ann);
+			if (result != NULL) {
+				wordResults.push_back(result);
+				string name = "../../../images/results/spacing/r_" + to_string(outputNr) + ".jpg";
+				imwrite(name, subImg);
+				subImg.release();
+				outputNr++;
+			}
+		}
 	}
 
 	std::string resultWord = LanguageModel::determineWord(wordResults);
@@ -151,7 +196,7 @@ void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spa
 	}
 	out.close();
 	bitwise_not(source, source);
-	showImage(source);
+	//showImage(source);
 
 	//showImage(subImg, "Cutout SubImg");
 }
@@ -182,6 +227,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 	int currX = 0;
 	while (currX + spacingTestWidth <= width) {
 		Mat subImg = smaller(cv::Range(0, height), cv::Range(currX, currX + spacingTestWidth));
+		//subImg = removeNoiseBlobs(subImg);
 		NeuralNetwork::testNN_image_spacing(subImg, calcIdx, calcProb, ann);
 
 		//cout << "Calc prob: " << calcProb << endl;
@@ -218,7 +264,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 
 	int validCount = 0;
 	for (int i = 0; i < spacingGroups.size(); i++) {
-		if (spacingGroups[i]->groupSize > 1) {
+		if (spacingGroups[i]->groupSize >= 1) {
 			validCount++;
 		}
 	}
@@ -353,7 +399,7 @@ void ImageProcessing::cutWords() {
 			cout << xPos << " " << yPos << endl;
 			Mat subImg = source(cv::Range(yPos * wordHeight, (yPos + 1) * wordHeight), cv::Range(xPos * wordWidth, (xPos + 1) * wordWidth));
 
-			showImage(subImg, "Coutout SubImg");
+			//showImage(subImg, "Coutout SubImg");
 
 			iterator++;
 		}
@@ -371,11 +417,19 @@ void ImageProcessing::showImage(cv::Mat img, std::string name) {
 
 //http://stackoverflow.com/questions/1585535/convert-rgb-to-black-white-in-opencv
 cv::Mat ImageProcessing::convertImageToBinary(cv::Mat source) {
-	Mat im_gray;
-	cvtColor(source, im_gray, CV_RGB2GRAY);
-	//showImage(im_gray);
-	Mat img_bw = im_gray > 210;
-	return img_bw;
+	Mat res = source.clone();
+	if (source.type() != CV_8UC1)
+		cvtColor(source, res, CV_RGB2GRAY);
+	////showImage(im_gray);
+	//Mat img_bw = im_gray > 210;
+	for (int y = 0; y < res.rows; y++) {
+		for (int x = 0; x < res.cols; x++) {
+			int pix = (int)res.at<uchar>(y, x);
+			res.at<uchar>(y, x) = (pix <= 210 ? 0 : 255); //otrādi, nekā, pārveidojot uz string
+		}
+	}
+
+	return res;
 }
 
 cv::Mat ImageProcessing::removeNoise(cv::Mat source) {
@@ -384,11 +438,52 @@ cv::Mat ImageProcessing::removeNoise(cv::Mat source) {
 	if (res1.empty()) {
 		cout << "Noise result is empty!" << endl;
 	}
-	//bilateralFilter(res1, res2, 9, 50, 50);
-	//addWeighted(source, -0.5, result, 1.5, 0, result);
-	//GaussianBlur(source, result, Size(3,3), 3, 3, 4);
-	//erode(result, result, Mat(), Point(-1, -1), 1, 0, 0);
-	//medianBlur(source, result, 3);
+
+	res1 = convertImageToBinary(res1);
+	res1 = removeNoiseBlobs(res1);
+	return res1;
+}
+
+cv::Mat ImageProcessing::removeNoiseBlobs(cv::Mat res1) {
+	double threshold = 20;
+
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+	vector<int> small_blobs;
+	double contour_area;
+	Mat temp_image;
+
+	res1 = convertImageToBinary(res1);
+
+	for (int y = 0; y < res1.rows; y++) {
+		for (int x = 0; x < res1.cols; x++) {
+			if (y == 0 || y == res1.rows - 1 || x == 0 || x == res1.cols - 1)
+				res1.at<uchar>(y, x) = 255;
+		}
+	}
+
+	bitwise_not(res1, res1);
+	// find all contours in the binary image
+	res1.copyTo(temp_image);
+	findContours(temp_image, contours, hierarchy, CV_RETR_LIST,
+		CV_CHAIN_APPROX_NONE);
+
+	// Find indices of contours whose area is less than `threshold` 
+	if (!contours.empty()) {
+		for (size_t i = 0; i<contours.size(); ++i) {
+			contour_area = contourArea(contours[i]);
+			if (contour_area < threshold)
+				small_blobs.push_back(i);
+		}
+	}
+
+	// fill-in all small contours with zeros
+	for (size_t i = 0; i < small_blobs.size(); ++i) {
+		drawContours(res1, contours, small_blobs[i], cv::Scalar(0),
+			CV_FILLED, 8);
+	}
+	bitwise_not(res1, res1);
+
 	return res1;
 }
 
@@ -429,7 +524,7 @@ cv::Mat ImageProcessing::deskewImage(cv::Mat source) {
 	if (img.empty()) {
 		cout << "Deskew image is empty!" << endl;
 	}
-	img = convertImageToBinary(img);
+	//img = convertImageToBinary(img);
 	//img = removeNoise(img);
 
 	double angle = compute_skew(img.clone());

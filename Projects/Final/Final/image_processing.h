@@ -64,7 +64,7 @@
 #define BGVAL_MIDDLE			186
 #define BGVAL_DELTA				30
 
-#define MIN_SPACING_PROBABILITY 0.9
+#define MIN_SPACING_PROBABILITY 0.85
 #define SPACE_MIN_SPACING_COUNT 6
 #define ALLOWED_ITERATION_ERROR 0
 
@@ -86,6 +86,8 @@ public:
 
 class ImageProcessing {
 public:
+	static int outputNr;
+
 	static void findWords_cv(cv::Mat);
 	static void showImage(cv::Mat, std::string s="Title");
 	static void iterateOverImage(cv::Mat);
@@ -95,6 +97,7 @@ public:
 	static void testFoundSymbols(cv::Mat source, std::vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth);
 	static cv::Mat convertImageToBinary(cv::Mat);
 	static cv::Mat removeNoise(cv::Mat);
+	static cv::Mat removeNoiseBlobs(cv::Mat);
 	static cv::Mat deskewImage(cv::Mat);
 	static cv::Mat setBrightness(cv::Mat, int);
 	static cv::Mat setContrast(cv::Mat);

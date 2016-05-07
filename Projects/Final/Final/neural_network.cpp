@@ -660,10 +660,10 @@ void NeuralNetwork::trainNN_spacing() {
 	const unsigned int num_input = INPUT_SIZE_SPACING;
 	const unsigned int num_output = 1;
 	const unsigned int num_layers = 4;
-	const float desired_error = (const float) 0.000005;
+	const float desired_error = (const float) 0.0000028;
 
 
-	unsigned int layers[num_layers] = { num_input, 21, 21, num_output };
+	unsigned int layers[num_layers] = { num_input, 40, 40, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.1, 0.1);
 
@@ -687,7 +687,7 @@ void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_input = INPUT_SIZE_LETTERS;
 	const unsigned int num_output = SYMBOL_COUNT;
 	const unsigned int num_layers = 4;
-	const float desired_error = 0.000021;
+	const float desired_error = 0.00004;
 
 	cout << "Training..." << endl;
 
@@ -697,7 +697,7 @@ void NeuralNetwork::trainNN_letters() {
 	//240 sigmoid
 	//290
 	//430
-	unsigned int layers[num_layers] = { num_input, 441, 441, num_output };
+	unsigned int layers[num_layers] = { num_input, 290, 290, num_output };
 	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
 	fann_randomize_weights(ann, -0.1, 0.1);
 	//fann_set_activation_steepness_hidden(ann, 0.95);
@@ -705,8 +705,8 @@ void NeuralNetwork::trainNN_letters() {
 
 	//FANN_ELLIOT_SYMMETRIC
 	//FANN_SIGMOID_SYMMETRIC
-	fann_set_activation_function_hidden(ann, FANN_SIGMOID_SYMMETRIC);
-	fann_set_activation_function_output(ann, FANN_SIGMOID_SYMMETRIC);
+	fann_set_activation_function_hidden(ann, FANN_ELLIOT_SYMMETRIC);
+	fann_set_activation_function_output(ann, FANN_ELLIOT_SYMMETRIC);
 
 	Utilities::setStartTime();
 
@@ -853,13 +853,15 @@ void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb
 		return;
 	}
 
+	Mat subImg = img.clone();
+
 	fann_type input[INPUT_SIZE_SPACING];
 	fann_type calc_out[1];
 	fann_type expected_out[1];
 
 	Size size(SPACING_WIDTH, SPACING_HEIGHT);
 	Mat resizedImg;
-	resize(img, resizedImg, size);
+	resize(subImg, resizedImg, size);
 
 	int sampleCount = 1;
 	int inputCount = INPUT_SIZE_SPACING;
@@ -886,12 +888,9 @@ void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb
 			currentLargestIdx = k;
 		}
 	}
-
 	//cout << "Calculated result (is spacing): " << tmp[currentLargestIdx] << endl;
-
 	calcIdx = (tmp[currentLargestIdx] >= 0 ? 1 : 0);
 	calcProb = tmp[currentLargestIdx];
-
 
 	//cout << "Calc prob: " << calcProb << endl;
 	//ImageProcessing::showImage(resizedImg);
@@ -901,6 +900,10 @@ void NeuralNetwork::testNN_image_spacing(Mat img, int &calcIdx, double &calcProb
 SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
 	if (ann == NULL) {
 		cout << "ann IS NULL!!??" << endl;
+		return NULL;
+	}
+	if (Utilities::isImageEmpty(img)) {
+		cout << "Image is empty" << endl;
 		return NULL;
 	}
 
@@ -917,9 +920,7 @@ SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
 	int outputCount = SYMBOL_COUNT;
 
 	string imgString = Utilities::convertImageToString_binary(resizedImg, false);
-	//cout << imgString << endl << imgString.length() << endl;
-
-	resizedImg.release();
+	//cout << imgString << endl;
 
 	int correctCount = 0;
 	for (int j = 0; j < inputCount; j++) {
@@ -952,6 +953,9 @@ SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
 		cout << "2: " << SYMBOLS[result->symbolIdxs[1]] << " (" << result->prob[1] << ")\n";
 	if (result->symbolIdxs[2] > -1)
 		cout << "3: " << SYMBOLS[result->symbolIdxs[2]] << " (" << result->prob[2] << ")\n";
+
+	ImageProcessing::showImage(resizedImg);
+	resizedImg.release();
 
 	return result;
 }

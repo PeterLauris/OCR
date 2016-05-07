@@ -35,6 +35,19 @@ float Utilities::randomFloat(float a, float b) {
 	return a + r;
 }
 
+bool Utilities::isImageEmpty(Mat img) {
+	int blackPixels = 0;
+	for (int y = 0; y < img.rows; y++) {
+		for (int x = 0; x < img.cols; x++) {
+			int pix = (int)img.at<uchar>(y, x);
+			//cout << pix << " ";
+			blackPixels += (pix <= 128 ? 1 : 0); //otrādi, nekā, pārveidojot uz string
+		}
+		//cout << "\n";
+	}
+	return blackPixels < MIN_BLACK_PIXELS;
+}
+
 ///Pārveido attēlu par 1 un 0 virkni
 string Utilities::convertImageToString(Mat img, bool useSpaces) {
 	string trainingDataContent = "";
