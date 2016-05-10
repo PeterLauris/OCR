@@ -105,7 +105,7 @@ int main() {
 		c = '1';
 
 		Mat source, tmp;
-		std::vector<cv::Rect> letterBoxes;
+		std::vector<cv::Rect> wordBoxes;
 
 		switch (c) {
 		case '1':
@@ -119,12 +119,15 @@ int main() {
 			//imwrite("tmp.jpg", source);
 			//source = imread("tmp.jpg");
 			tmp = source.clone();
-			letterBoxes = ImageProcessing::detectLetters(source);
-			cout << "Word boxes found: " << letterBoxes.size() << endl;
-			for (int i = 0; i < letterBoxes.size(); i++) {
+			wordBoxes = ImageProcessing::findWords(source);
+			cout << "Word boxes found: " << wordBoxes.size() << endl;
+			wordBoxes = Utilities::reorderWordBoxes(wordBoxes);
+			cout << "Word boxes found: " << wordBoxes.size() << endl;
+			for (int i = 0; i < wordBoxes.size(); i++) {
 				//rectangle(tmp, letterBoxes[i], Scalar(0, 0, 0), 2);
-				Mat subImg = tmp(letterBoxes[i]);
+				Mat subImg = tmp(wordBoxes[i]);
 				ImageProcessing::iterateOverImage(subImg.clone());
+				cout << "y: " << wordBoxes[i].y << endl;
 				ImageProcessing::showImage(subImg, "Cutout SubImg");
 				subImg.release();
 			}
@@ -132,7 +135,7 @@ int main() {
 			//imwrite("tmp.jpg", tmp);
 			break;
 		case '2':
-			ImageProcessing::findWords_cv(source);
+
 			break;
 		case '3':
 			NeuralNetwork::createNNData_letters(0);
@@ -176,7 +179,7 @@ int main() {
 			//ImageProcessing::findWords_cv("../../../images/pages/word_finding_1.png");
 			break;
 		case 'l':
-			ImageProcessing::cutWords();
+
 			break;
 		case 'b':
 			//ImageProcessing::convertTo1bpp("../../../images/learning/letters/training-set/");

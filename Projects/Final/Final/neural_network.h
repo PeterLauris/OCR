@@ -32,9 +32,9 @@
 //#define SYMBOL_COUNT 84
 
 #define TRANSFORMATION_COUNT_SPACING 1 //cik reizes katru bildi pievienos trenēšanas setam (oriģināls + pamainītas)
-#define TRANSFORMATION_COUNT_LETTER 1
+#define TRANSFORMATION_COUNT_LETTER 2
 #define DEFORMATION_AMOUNT_SPACING 0.0001
-#define DEFORMATION_AMOUNT_LETTER 0.06
+#define DEFORMATION_AMOUNT_LETTER 0.1
 
 #define SORTING_VECTOR_COUNT 1000
 

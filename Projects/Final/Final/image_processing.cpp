@@ -240,35 +240,35 @@ void ImageProcessing::iterateOverImage(Mat source) {
 		currX += spacingIterationWidth;
 	}
 
+	std::vector<SpacingGroup*> spacingGroups;
 	if (spacingCoordsFound.size() == 0) {
 		cout << "TODO no spacing found (only a letter??)" << endl;
-		return;
 	}
+	else {
+		spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[0]));
 
-	std::vector<SpacingGroup*> spacingGroups;
-	spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[0]));
+		//apstrādā atrastās atstarpju koordinātas, sadala tās pa grupām
+		for (int i = 1; i < spacingCoordsFound.size(); i++) {
+			SpacingGroup *lastSpacingGroup = spacingGroups.back();
 
-	//apstrādā atrastās atstarpju koordinātas, sadala tās pa grupām
-	for (int i = 1; i < spacingCoordsFound.size(); i++) {
-		SpacingGroup *lastSpacingGroup = spacingGroups.back();
-
-		if (spacingCoordsFound[i] <= lastSpacingGroup->startX + (lastSpacingGroup->groupSize + ALLOWED_ITERATION_ERROR) * spacingIterationWidth) { //current spacing belongs to this group
-			lastSpacingGroup->Add();
+			if (spacingCoordsFound[i] <= lastSpacingGroup->startX + (lastSpacingGroup->groupSize + ALLOWED_ITERATION_ERROR) * spacingIterationWidth) { //current spacing belongs to this group
+				lastSpacingGroup->Add();
+			}
+			else { //create a new spacing group
+				spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[i]));
+			}
 		}
-		else { //create a new spacing group
-			spacingGroups.push_back(new SpacingGroup(spacingCoordsFound[i]));
+
+		cout << "Total spacing count: " << spacingCoordsFound.size() << "\nSpacing groups found: " << spacingGroups.size() << endl;
+
+		int validCount = 0;
+		for (int i = 0; i < spacingGroups.size(); i++) {
+			if (spacingGroups[i]->groupSize >= 1) {
+				validCount++;
+			}
 		}
+		cout << "Valid spacing groups found: " << validCount << endl;
 	}
-
-	cout << "Total spacing count: " << spacingCoordsFound.size() << "\nSpacing groups found: " << spacingGroups.size() << endl;
-
-	int validCount = 0;
-	for (int i = 0; i < spacingGroups.size(); i++) {
-		if (spacingGroups[i]->groupSize >= 1) {
-			validCount++;
-		}
-	}
-	cout << "Valid spacing groups found: " << validCount << endl;
 
 	testFoundSymbols(smaller, spacingGroups, spacingIterationWidth, spacingTestWidth);
 
@@ -280,7 +280,7 @@ void ImageProcessing::iterateOverImage(Mat source) {
 }
 
 ///Atrod vektoru ar vārdiem attēlā
-std::vector<cv::Rect> ImageProcessing::detectLetters(cv::Mat img) {
+std::vector<cv::Rect> ImageProcessing::findWords(cv::Mat img) {
 	std::vector<cv::Rect> boundRect;
 	cv::Mat img_gray, img_sobel, img_threshold, element;
 	//cvtColor(img, img_gray, CV_BGR2GRAY);
@@ -300,112 +300,6 @@ std::vector<cv::Rect> ImageProcessing::detectLetters(cv::Mat img) {
 				boundRect.push_back(appRect);
 		}
 	return boundRect;
-}
-
-///Izgriež vārdus, izmantojot OpenCV
-void ImageProcessing::findWords_cv(cv::Mat rgb) {
-
-	//rgb = imread("../../../images/pages/word_finding_1.png");
-	// downsample and use it for processing
-	//pyrDown(large, rgb);
-	Mat small = rgb;
-	//cvtColor(rgb, small, CV_BGR2GRAY);
-	// morphological gradient
-	Mat grad;
-	Mat morphKernel = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
-	morphologyEx(small, grad, MORPH_GRADIENT, morphKernel);
-	// binarize
-	Mat bw;
-	threshold(grad, bw, 0.0, 255.0, THRESH_BINARY | THRESH_OTSU);
-	// connect horizontally oriented regions
-	Mat connected;
-	int sizeX = rgb.cols / 20;
-	morphKernel = getStructuringElement(MORPH_RECT, Size(sizeX, 1));
-	morphologyEx(bw, connected, MORPH_CLOSE, morphKernel);
-	// find contours
-	Mat mask = Mat::zeros(bw.size(), CV_8UC1);
-	vector<vector<Point>> contours;
-	vector<Vec4i> hierarchy;
-	findContours(connected, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-	// filter contours
-	for (int idx = 0; idx >= 0; idx = hierarchy[idx][0]) {
-		Rect rect = boundingRect(contours[idx]);
-		Mat maskROI(mask, rect);
-		maskROI = Scalar(0, 0, 0);
-		// fill the contour
-		drawContours(mask, contours, idx, Scalar(255, 255, 255), CV_FILLED);
-		// ratio of non-zero pixels in the filled region
-		double r = (double)countNonZero(maskROI) / (rect.width*rect.height);
-
-		if (r > .45 /* assume at least 45% of the area is filled if it contains text */
-			&&
-			(rect.height > 8 && rect.width > 8) /* constraints on region size */
-												/* these two conditions alone are not very robust. better to use something
-												like the number of significant peaks in a horizontal projection as a third condition */
-			)
-		{
-			rectangle(rgb, rect, Scalar(0, 0, 0), 2);
-			//Mat subImg = rgb(rect);
-			////iterateOverImage(subImg);
-			//showImage(subImg, "Cutout SubImg");
-
-			//subImg.release();
-		}
-	}
-
-	//showImage(rgb, "Cutout SubImg");
-	imwrite(string("rgb.jpg"), rgb);
-}
-
-//TODO iepējams nav nepieciešams
-///Ņem lielo failu ar atrastajiem vārdiem un sagriež bildes
-void ImageProcessing::cutWords() {
-	ifstream in;
-	in.open("../../../images/results/result.data");
-	Mat source = imread("../../../images/results/result.templates.png");
-	
-	bool start = false;
-	int wordWidth, wordHeight;
-	string s;
-	int widthCount, heightCount, iterator = 0;
-	while (!in.eof()) {
-		in >> s;
-		//cout << s << " ";
-
-		if (s == "lattice") {
-			in >> s >> s >> s >> s;
-			s = s.substr(0, s.length()-1);
-			wordWidth = stoi(s);
-			cout << "width: " << wordWidth;
-
-			in >> s >> s >> s;
-			wordHeight = stoi(s);
-			cout << "height: " << wordHeight;
-
-			widthCount = source.cols / wordWidth;
-			heightCount = source.rows / wordHeight;
-
-			start = true;
-		}
-		else if (start) {
-			int realX, realY;
-			in >> realX >> realY;
-
-			cout << "(" << realX << ";" << realY << ")\n";
-
-			int xPos = iterator % widthCount;
-			int yPos = iterator / widthCount;
-
-			cout << xPos << " " << yPos << endl;
-			Mat subImg = source(cv::Range(yPos * wordHeight, (yPos + 1) * wordHeight), cv::Range(xPos * wordWidth, (xPos + 1) * wordWidth));
-
-			//showImage(subImg, "Coutout SubImg");
-
-			iterator++;
-		}
-
-		in >> s;
-	}
 }
 
 void ImageProcessing::showImage(cv::Mat img, std::string name) {

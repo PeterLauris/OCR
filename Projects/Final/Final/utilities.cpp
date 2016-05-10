@@ -97,3 +97,50 @@ string Utilities::wordToString(std::vector<SymbolResult*> word, int *choiceIdxs)
 	}
 	return res;
 }
+
+std::vector<cv::Rect> Utilities::reorderWordBoxes(std::vector<cv::Rect> wordBoxes) {
+	static std::vector<cv::Rect> resultWb;
+
+	//iegūst vidējo vārda augstumu
+	int averageHeight = 0;
+	for (int i = 0; i < wordBoxes.size(); i++) {
+		averageHeight += wordBoxes[i].height;
+	}
+	averageHeight /= wordBoxes.size();
+
+	while (!wordBoxes.empty()) {
+		//atrod augstāko wb
+		int highestWbY = wordBoxes[0].y;
+		int highestIdx = 0;
+		for (int i = 1; i < wordBoxes.size(); i++) {
+			if (highestWbY > wordBoxes[i].y) {
+				highestWbY = wordBoxes[i].y;
+			}
+		}
+
+		Rect leftmostWb;
+		int leftMostIdx;
+		do {
+			leftMostIdx = -1;
+
+			for (int i = 0; i < wordBoxes.size(); i++) {
+				if (wordBoxes[i].y > highestWbY - averageHeight &&
+					wordBoxes[i].y < highestWbY + averageHeight) {
+					if (leftMostIdx == -1 ||
+						leftmostWb.x > wordBoxes[i].x) {
+						leftmostWb = wordBoxes[i];
+						leftMostIdx = i;
+					}
+				}
+			}
+
+			if (leftMostIdx > -1) {
+				resultWb.push_back(wordBoxes[leftMostIdx]);
+				wordBoxes.erase(wordBoxes.begin() + leftMostIdx);
+			}
+
+		} while (leftMostIdx > -1);
+	}
+
+	return resultWb;
+}

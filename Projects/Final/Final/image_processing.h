@@ -88,12 +88,12 @@ class ImageProcessing {
 public:
 	static int outputNr;
 
-	static void findWords_cv(cv::Mat);
+	//static void findWords_cv(cv::Mat);
 	static void showImage(cv::Mat, std::string s="Title");
 	static void iterateOverImage(cv::Mat);
 	static cv::Mat prepareImage(cv::Mat subImg);
-	static void cutWords();
-	static std::vector<cv::Rect> detectLetters(cv::Mat img);
+	//static void cutWords();
+	static std::vector<cv::Rect> findWords(cv::Mat img);
 	static void testFoundSymbols(cv::Mat source, std::vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth);
 	static cv::Mat convertImageToBinary(cv::Mat);
 	static cv::Mat removeNoise(cv::Mat);

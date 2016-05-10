@@ -52,4 +52,5 @@ public:
 	static bool isImageEmpty(cv::Mat);
 	static std::string convertImageToString(cv::Mat img, bool useSpaces);
 	static std::string convertImageToString_binary(cv::Mat img, bool useSpaces);
+	static std::vector<cv::Rect> reorderWordBoxes(std::vector<cv::Rect>);
 };
