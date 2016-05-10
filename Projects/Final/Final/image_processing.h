@@ -68,6 +68,8 @@
 #define SPACE_MIN_SPACING_COUNT 6
 #define ALLOWED_ITERATION_ERROR 0
 
+#define CONTOURS_THRESHOLD 143
+
 
 struct SpacingGroup {
 public:
@@ -90,15 +92,14 @@ public:
 
 	//static void findWords_cv(cv::Mat);
 	static void showImage(cv::Mat, std::string s="Title");
-	static void iterateOverImage(cv::Mat);
+	static std::string iterateOverImage(cv::Mat);
 	static cv::Mat prepareImage(cv::Mat subImg);
 	//static void cutWords();
 	static std::vector<cv::Rect> findWords(cv::Mat img);
-	static void testFoundSymbols(cv::Mat source, std::vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth);
+	static std::string testFoundSymbols(cv::Mat source, std::vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth);
 	static cv::Mat convertImageToBinary(cv::Mat);
 	static cv::Mat removeNoise(cv::Mat);
 	static cv::Mat removeNoiseBlobs(cv::Mat);
 	static cv::Mat deskewImage(cv::Mat);
-	static cv::Mat setBrightness(cv::Mat, int);
 	static cv::Mat setContrast(cv::Mat);
 };

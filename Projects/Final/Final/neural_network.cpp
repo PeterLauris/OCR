@@ -10,7 +10,6 @@
 #include "image_processing.h"
 #include "utilities.h"
 
-
 using namespace std;
 using namespace cv;
 

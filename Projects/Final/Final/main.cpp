@@ -106,11 +106,13 @@ int main() {
 
 		Mat source, tmp;
 		std::vector<cv::Rect> wordBoxes;
+		string result;
+		ofstream out;
 
 		switch (c) {
 		case '1':
 			//NeuralNetwork::trainOCR_spacing();
-			//NeuralNetwork::trainOCR_letters();
+			NeuralNetwork::trainOCR_letters();
 			source = imread("../../../images/pages/piemers.png");
 			//ImageProcessing::showImage(source, "Original");
 			source = ImageProcessing::setContrast(source);
@@ -120,17 +122,18 @@ int main() {
 			//source = imread("tmp.jpg");
 			tmp = source.clone();
 			wordBoxes = ImageProcessing::findWords(source);
-			cout << "Word boxes found: " << wordBoxes.size() << endl;
 			wordBoxes = Utilities::reorderWordBoxes(wordBoxes);
-			cout << "Word boxes found: " << wordBoxes.size() << endl;
+			result = "";
 			for (int i = 0; i < wordBoxes.size(); i++) {
 				//rectangle(tmp, letterBoxes[i], Scalar(0, 0, 0), 2);
 				Mat subImg = tmp(wordBoxes[i]);
-				ImageProcessing::iterateOverImage(subImg.clone());
-				cout << "y: " << wordBoxes[i].y << endl;
-				ImageProcessing::showImage(subImg, "Cutout SubImg");
+				result += ImageProcessing::iterateOverImage(subImg.clone()) + " ";
+				//ImageProcessing::showImage(subImg, "Cutout SubImg");
 				subImg.release();
 			}
+			out.open("result.txt");
+			out << result;
+			out.close();
 			ImageProcessing::showImage(tmp, "Result 1");
 			//imwrite("tmp.jpg", tmp);
 			break;

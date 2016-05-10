@@ -59,9 +59,6 @@ double LanguageModel::getCredibilityLM(std::string word) {
 	TextStats stats;
 	useLM->dout(out);
 	useLM->pplFile(file, stats, 0);
-	//useLM->dout(out);
-	//out << "file " << pplFile << ":\n" << stats;
-
 
 	out.close();
 
@@ -69,12 +66,6 @@ double LanguageModel::getCredibilityLM(std::string word) {
 	std::stringstream buffer;
 	buffer << i.rdbuf();
 	string str = buffer.str();
-	/*int pos1 = str.find("]") + 2;
-	int pos2 = str.find("[", pos1);
-	int pos3 = str.find("]", str.find("]", pos2) + 1) + 2;
-	int pos4 = str.find("[", pos3);
-	string p1 = str.substr(pos1, pos2 - pos1 - 1);
-	string p2 = str.substr(pos3, pos4 - pos3 - 1);*/
 
 	int pos1 = str.find("logprob=") + 10;
 	int pos2 = str.find("ppl=") - 1;
@@ -89,9 +80,8 @@ double LanguageModel::getCredibilityLM(std::string word) {
 
 	i.close();
 
-	return dp1/2;
+	return dp1;
 }
-
 
 std::string LanguageModel::determineWord(std::vector<SymbolResult*> wordResults) {
 	std::string bestResult = "";

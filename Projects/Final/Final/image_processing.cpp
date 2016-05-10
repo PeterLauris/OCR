@@ -94,7 +94,7 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	return subImg;
 }
 
-void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth) {
+std::string ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth) {
 	ofstream out("results.txt");
 	std::vector<SymbolResult*> wordResults;
 	int prevGroupX = 0;
@@ -144,16 +144,6 @@ void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spa
 					outputNr++;
 				}
 			}
-			//TODO uncomment
-			//if (spacingGroups[i]->groupSize > SPACE_MIN_SPACING_COUNT) { //there is a space between the letters
-			//	std::string resultWord = LanguageModel::determineWord(wordResults);
-			//	out << resultWord << " ";
-
-			//	while (wordResults.size() > 0) {
-			//		delete wordResults.back();
-			//		wordResults.pop_back();
-			//	}
-			//}
 
 			prevGroupX = currGroupX;
 		}
@@ -187,21 +177,19 @@ void ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spa
 	}
 
 	std::string resultWord = LanguageModel::determineWord(wordResults);
-	out << resultWord << " ";
+	//out << resultWord << " ";
 
 	cout << "Clear wordResults vector" << endl;
 	while (wordResults.size() > 0) {
 		delete wordResults.back();
 		wordResults.pop_back();
 	}
-	out.close();
+	//out.close();
 	bitwise_not(source, source);
-	//showImage(source);
-
-	//showImage(subImg, "Cutout SubImg");
+	return resultWord;
 }
 
-void ImageProcessing::iterateOverImage(Mat source) {
+std::string ImageProcessing::iterateOverImage(Mat source) {
 	//Mat source = imread("C:\\Users\\peter\\OneDrive\\Projects\\OCR\\images\\test_digits_1.png");
 
 	Mat smaller = source;
@@ -270,36 +258,40 @@ void ImageProcessing::iterateOverImage(Mat source) {
 		cout << "Valid spacing groups found: " << validCount << endl;
 	}
 
-	testFoundSymbols(smaller, spacingGroups, spacingIterationWidth, spacingTestWidth);
+	std::string result = testFoundSymbols(smaller, spacingGroups, spacingIterationWidth, spacingTestWidth);
 
 	//clear memory
 	while (!spacingGroups.empty()) {
 		delete spacingGroups.back();
 		spacingGroups.pop_back();
 	}
+
+	return result;
 }
 
 ///Atrod vektoru ar vārdiem attēlā
 std::vector<cv::Rect> ImageProcessing::findWords(cv::Mat img) {
-	std::vector<cv::Rect> boundRect;
-	cv::Mat img_gray, img_sobel, img_threshold, element;
-	//cvtColor(img, img_gray, CV_BGR2GRAY);
-	img_gray = img;
-	cv::Sobel(img_gray, img_sobel, CV_8U, 4, 4, 15, 1, 0, cv::BORDER_DEFAULT);
-	cv::threshold(img_sobel, img_threshold, 0, 255, CV_THRESH_OTSU + CV_THRESH_BINARY);
+	std::vector<cv::Rect> wordBoxes;
+	cv::Mat img_sobel, img_threshold, element;
+
+	cv::Sobel(img, img_sobel, CV_8U, 4, 4, 15, 1, 0, cv::BORDER_DEFAULT); //bildei tiek pielietots filtrs
+	//cv::threshold(img_sobel, img_threshold, 0, 255, CV_THRESH_OTSU + CV_THRESH_BINARY);
+	//img_threshold = img_sobel;
 	element = getStructuringElement(cv::MORPH_RECT, cv::Size(6, 3));
-	cv::morphologyEx(img_threshold, img_threshold, CV_MOP_CLOSE, element); //Does the trick
+	cv::morphologyEx(img_sobel, img_sobel, CV_MOP_CLOSE, element); //Does the trick
+	//showImage(img_sobel);
 	std::vector< std::vector< cv::Point> > contours;
-	cv::findContours(img_threshold, contours, 0, 1);
+	cv::findContours(img_sobel, contours, 0, 1);
 	std::vector<std::vector<cv::Point> > contours_poly(contours.size());
-	for (int i = 0; i < contours.size(); i++)
-		if (contours[i].size()>143) {
+
+	for (int i = 0; i < contours.size(); i++) {
+		if (contours[i].size() > CONTOURS_THRESHOLD) {
 			cv::approxPolyDP(cv::Mat(contours[i]), contours_poly[i], 3, true);
 			cv::Rect appRect(boundingRect(cv::Mat(contours_poly[i])));
-			//if (appRect.width>appRect.height)
-				boundRect.push_back(appRect);
+			wordBoxes.push_back(appRect);
 		}
-	return boundRect;
+	}
+	return wordBoxes;
 }
 
 void ImageProcessing::showImage(cv::Mat img, std::string name) {
@@ -382,11 +374,8 @@ cv::Mat ImageProcessing::removeNoiseBlobs(cv::Mat res1) {
 }
 
 //http://stackoverflow.com/questions/24046089/calculating-skew-of-text-opencv
-double compute_skew(cv::Mat img) {
-	// Binarize
+double computeSkew(cv::Mat img) {
 	cv::threshold(img, img, 225, 255, cv::THRESH_BINARY);
-
-	// Invert colors
 	cv::bitwise_not(img, img);
 
 	cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 3));
@@ -402,8 +391,8 @@ double compute_skew(cv::Mat img) {
 	cv::RotatedRect box = cv::minAreaRect(cv::Mat(points));
 
 	double angle = box.angle;
-	if (angle < -45.)
-		angle += 90.;
+	if (angle < -45)
+		angle += 90;
 
 	cv::Point2f vertices[4];
 	box.points(vertices);
@@ -418,12 +407,9 @@ cv::Mat ImageProcessing::deskewImage(cv::Mat source) {
 	if (img.empty()) {
 		cout << "Deskew image is empty!" << endl;
 	}
-	//img = convertImageToBinary(img);
-	//img = removeNoise(img);
 
-	double angle = compute_skew(img.clone());
+	double angle = computeSkew(img.clone());
 	std::cout << "Skew angle: " << angle << std::endl;
-
 
 	cv::bitwise_not(img, img);
 
@@ -452,25 +438,9 @@ cv::Mat ImageProcessing::deskewImage(cv::Mat source) {
 	return cropped;
 }
 
-cv::Mat ImageProcessing::setBrightness(cv::Mat source, int limit) {
-	Ptr<CLAHE> clahe = createCLAHE();
-	clahe->setClipLimit(limit);
-
-	Mat dst;
-	clahe->apply(source, dst);
-
-	return dst;
-}
-
 //http://docs.opencv.org/2.4/doc/tutorials/core/basic_linear_transform/basic_linear_transform.html
 cv::Mat ImageProcessing::setContrast(cv::Mat source) {
 	Mat new_image = Mat::zeros(source.size(), source.type());
-
-	/// Initialize values
-	std::cout << " Basic Linear Transforms " << std::endl;
-	std::cout << "-------------------------" << std::endl;
-	//std::cout << "* Enter the alpha value [1.0-3.0]: "; std::cin >> alpha;
-	//std::cout << "* Enter the beta value [0-100]: "; std::cin >> beta;
 	double alpha = 1.55;
 	int beta = 25;
 
@@ -485,92 +455,5 @@ cv::Mat ImageProcessing::setContrast(cv::Mat source) {
 
 	return new_image;
 }
-
-//int main2() {
-//	char *dirin, *dirout_1bpp, *dirout_words, *dirout, *rootname, *fname;
-//
-//	PIX *pixs, *pixt, *pix_deskew, *pix_light, *pix_noise, *pix_words;
-//
-//	JBDATA *jbdata;
-//	JBCLASSER *classer;
-//
-//	l_int32 firstpage = 0;
-//	l_int32 npages = 0;
-//
-//	dirin = "../../../images/test-set";
-//	dirout_1bpp = "../../../images/results/1bpp";
-//	dirout_words = "../../../images/results/words";
-//	dirout = "../../../images/results";
-//	rootname = "result";
-//
-//	/* Compute the word bounding boxes at 2x reduction, along with
-//	* the textlines that they are in. */
-//	SARRAY *safiles = getSortedPathnamesInDirectory(dirin, NULL, firstpage, npages);
-//	l_int32 nfiles = sarrayGetCount(safiles);
-//	printf("Count received: %d\n", nfiles);
-//	BOXAA *baa = boxaaCreate(nfiles);
-//	NUMAA *naa = numaaCreate(nfiles);
-//
-//
-//	printf("Begin image processing\n");
-//
-//	//l_int32 w, h;
-//	//l_float32 deg2rad = 3.1415926535 / 180.;
-//	//pixGetDimensions(pixs, &w, &h, NULL);
-//	//pixFindSkew(pix_tmp, &angle, &conf);
-//	//pixs = pixRotate(pixs, deg2rad * angle, L_ROTATE_AREA_MAP, L_BRING_IN_WHITE, w, h);
-//
-//	for (l_int32 i = 0; i < nfiles; i++) {
-//		printf("--- %d ---\n", i);
-//		fname = sarrayGetString(safiles, i, 0);
-//		if ((pixs = pixRead(fname)) == NULL) {
-//			printf("image file %s not read\n", fname);
-//			continue;
-//		}
-//
-//		l_float32 angle, conf, score;
-//		l_int32 lightingVal;
-//
-//		pix_deskew = pixDeskew(pixs, 0);
-//
-//		pix_light = ImageProcessing::normalizeLighting(pix_deskew, &lightingVal);
-//		pix_noise = ImageProcessing::removeNoise(pix_light, &lightingVal);
-//
-//		pixt = pixConvertTo1(pix_noise, 150);
-//
-//		//create a 1bpp image in the corresponding location
-//		char filename[BUF_SIZE];
-//		snprintf(filename, BUF_SIZE, "%s%s%s.%05d.png", dirout_1bpp, "/", rootname, i);
-//		pixWrite(filename, pixt, IFF_PNG);
-//
-//		pix_words = ImageProcessing::findWords(pixt, baa, naa);
-//		ImageProcessing::writeWords(pix_words, dirout_words, rootname, i);
-//
-//
-//		pixDestroy(&pixt);
-//		pixDestroy(&pix_light);
-//		pixDestroy(&pix_noise);
-//		pixDestroy(&pix_deskew);
-//		pixDestroy(&pix_words);
-//		pixDestroy(&pixs);
-//		printf("\n\n", i);
-//	}
-//
-//	pixDestroy(&pixt);
-//	pixDestroy(&pix_deskew);
-//	pixDestroy(&pix_light);
-//	pixDestroy(&pix_noise);
-//	pixDestroy(&pix_words);
-//	pixDestroy(&pixs);
-//	boxaaDestroy(&baa);
-//	numaaDestroy(&naa);
-//	sarrayDestroy(&safiles);
-//
-//	//findWords2(dirout_1bpp, dirout);
-//
-//	printf("\n---\nEND\n");
-//	getchar();
-//	return 0;
-//}
 
 #endif
