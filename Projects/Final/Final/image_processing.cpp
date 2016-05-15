@@ -26,8 +26,6 @@ void print(Mat img) {
 ///Sagatvo burta attēlu atpazīšanai
 ///Atrod burtu, nocentrē to
 cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
-	//TODO needs to be improved
-
 	Mat mSource_Gray, mThreshold;
 	//cvtColor(subImg, mSource_Gray, COLOR_BGR2GRAY);
 	//threshold(mSource_Gray, mThreshold, 254, 255, THRESH_BINARY_INV);
@@ -84,9 +82,6 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	resize(subImg, subImg, Size(LETTER_WIDTH, LETTER_HEIGHT));
 
 	subImg = convertImageToBinary(subImg);
-
-	//print(subImg);
-	//getchar();
 
 	Points.release();
 	mThreshold.release();
@@ -247,7 +242,7 @@ std::string ImageProcessing::iterateOverImage(Mat source) {
 			}
 		}
 
-		cout << "Total spacing count: " << spacingCoordsFound.size() << "\nSpacing groups found: " << spacingGroups.size() << endl;
+		//cout << "Total spacing count: " << spacingCoordsFound.size() << "\nSpacing groups found: " << spacingGroups.size() << endl;
 
 		int validCount = 0;
 		for (int i = 0; i < spacingGroups.size(); i++) {
@@ -255,7 +250,7 @@ std::string ImageProcessing::iterateOverImage(Mat source) {
 				validCount++;
 			}
 		}
-		cout << "Valid spacing groups found: " << validCount << endl;
+		//cout << "Valid spacing groups found: " << validCount << endl;
 	}
 
 	std::string result = testFoundSymbols(smaller, spacingGroups, spacingIterationWidth, spacingTestWidth);
@@ -265,6 +260,8 @@ std::string ImageProcessing::iterateOverImage(Mat source) {
 		delete spacingGroups.back();
 		spacingGroups.pop_back();
 	}
+
+	cout << result << endl;
 
 	return result;
 }
@@ -278,16 +275,15 @@ std::vector<cv::Rect> ImageProcessing::findWords(cv::Mat img) {
 	//cv::threshold(img_sobel, img_threshold, 0, 255, CV_THRESH_OTSU + CV_THRESH_BINARY);
 	//img_threshold = img_sobel;
 	element = getStructuringElement(cv::MORPH_RECT, cv::Size(6, 3));
-	cv::morphologyEx(img_sobel, img_sobel, CV_MOP_CLOSE, element); //Does the trick
-	//showImage(img_sobel);
+	cv::morphologyEx(img_sobel, img_sobel, CV_MOP_CLOSE, element); //pielieto slēgšanas operāciju attēlam
 	std::vector< std::vector< cv::Point> > contours;
-	cv::findContours(img_sobel, contours, 0, 1);
-	std::vector<std::vector<cv::Point> > contours_poly(contours.size());
+	cv::findContours(img_sobel, contours, 0, 1); //atrod vārdu kontūras
+	std::vector<std::vector<cv::Point> > contoursApprox(contours.size());
 
 	for (int i = 0; i < contours.size(); i++) {
-		if (contours[i].size() > CONTOURS_THRESHOLD) {
-			cv::approxPolyDP(cv::Mat(contours[i]), contours_poly[i], 3, true);
-			cv::Rect appRect(boundingRect(cv::Mat(contours_poly[i])));
+		if (contours[i].size() > CONTOURS_THRESHOLD) { //ja kontūra ir pietiekami liela, uzskata to par vārdu
+			cv::approxPolyDP(cv::Mat(contours[i]), contoursApprox[i], 3, true);
+			cv::Rect appRect(boundingRect(cv::Mat(contoursApprox[i])));
 			wordBoxes.push_back(appRect);
 		}
 	}

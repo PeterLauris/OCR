@@ -112,7 +112,7 @@ int main() {
 		switch (c) {
 		case '1':
 			//NeuralNetwork::trainOCR_spacing();
-			NeuralNetwork::trainOCR_letters();
+			//NeuralNetwork::trainOCR_letters();
 			source = imread("../../../images/pages/piemers.png");
 			//ImageProcessing::showImage(source, "Original");
 			source = ImageProcessing::setContrast(source);
@@ -131,10 +131,11 @@ int main() {
 				//ImageProcessing::showImage(subImg, "Cutout SubImg");
 				subImg.release();
 			}
-			out.open("result.txt");
+			out.open("result2.txt");
+			cout << result << endl;
 			out << result;
 			out.close();
-			ImageProcessing::showImage(tmp, "Result 1");
+			//ImageProcessing::showImage(tmp, "Result 1");
 			//imwrite("tmp.jpg", tmp);
 			break;
 		case '2':

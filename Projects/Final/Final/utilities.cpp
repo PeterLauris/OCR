@@ -108,6 +108,7 @@ std::vector<cv::Rect> Utilities::reorderWordBoxes(std::vector<cv::Rect> wordBoxe
 	}
 	averageHeight /= wordBoxes.size();
 
+	//izpilda līdz visi wb ir sakārtoti
 	while (!wordBoxes.empty()) {
 		//atrod augstāko wb
 		int highestWbY = wordBoxes[0].y;
@@ -123,6 +124,7 @@ std::vector<cv::Rect> Utilities::reorderWordBoxes(std::vector<cv::Rect> wordBoxe
 		do {
 			leftMostIdx = -1;
 
+			//sakārto augstākajā rindā esošos wb
 			for (int i = 0; i < wordBoxes.size(); i++) {
 				if (wordBoxes[i].y > highestWbY - averageHeight &&
 					wordBoxes[i].y < highestWbY + averageHeight) {
@@ -139,7 +141,7 @@ std::vector<cv::Rect> Utilities::reorderWordBoxes(std::vector<cv::Rect> wordBoxe
 				wordBoxes.erase(wordBoxes.begin() + leftMostIdx);
 			}
 
-		} while (leftMostIdx > -1);
+		} while (leftMostIdx > -1); //izpilda līdz šajā rindā vairs nav wb
 	}
 
 	return resultWb;

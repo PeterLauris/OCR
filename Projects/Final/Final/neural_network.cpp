@@ -596,12 +596,12 @@ void NeuralNetwork::trainNN_spacing() {
 
 ///Trenē neironu tīklu simbolu atpazīšanai
 void NeuralNetwork::trainNN_letters() {
-	const unsigned int max_epochs = 500000;
-	const unsigned int epochs_between_reports = 10;
-	const unsigned int num_input = INPUT_SIZE_LETTERS;
-	const unsigned int num_output = SYMBOL_COUNT;
-	const unsigned int num_layers = 4;
-	const float desired_error = 0.00004;
+	const unsigned int max_epochs = 500000; //maksimālais epohu skaits
+	const unsigned int epochs_between_reports = 10; //atskaišu biežums
+	const unsigned int num_input = INPUT_SIZE_LETTERS; //ieejas izmērs
+	const unsigned int num_output = SYMBOL_COUNT; //izejas izmērs
+	const unsigned int num_layers = 4; //NN slāņu skaits
+	const float desired_error = 0.000035; //vēlamā trenēšanas kļūda
 
 	cout << "Training..." << endl;
 
@@ -611,8 +611,8 @@ void NeuralNetwork::trainNN_letters() {
 	//240 sigmoid
 	//290
 	//430
-	unsigned int layers[num_layers] = { num_input, 255, 255, num_output };
-	struct fann *ann = fann_create_standard_array(num_layers, layers); //fann_create_standard(num_layers, num_input, num_neurons_hidden, num_output);
+	unsigned int layers[num_layers] = { num_input, 370, 370, num_output }; //tiek definēts neironu skais slāņos
+	struct fann *ann = fann_create_standard_array(num_layers, layers);
 	fann_randomize_weights(ann, -0.1, 0.1);
 	//fann_set_activation_steepness_hidden(ann, 0.95);
 	//fann_set_learning_rate(ann, 0.95);
@@ -624,11 +624,11 @@ void NeuralNetwork::trainNN_letters() {
 
 	Utilities::setStartTime();
 
-	fann_train_on_file(ann, "train_letters.in", max_epochs, epochs_between_reports, desired_error);
-	fann_save(ann, "result_letters.net");
+	fann_train_on_file(ann, "train_letters.in", max_epochs, epochs_between_reports, desired_error); //sāk neironu tīkla trenēšanu
+	fann_save(ann, "result_letters.net"); //saglabā uztrenēto neironu tīklu
 	fann_destroy(ann);
 
-	Utilities::getTimePassed();
+	Utilities::getTimePassed(); //iegūst trenēšanas laiku
 
 	cout << "\a";
 }
@@ -861,12 +861,12 @@ SymbolResult * NeuralNetwork::testNN_image_letter(Mat img, fann *ann) {
 		}
 	}
 
-	cout << "Calculated result:\n"
+	/*cout << "Calculated result:\n"
 		<< "1: " << SYMBOLS[result->symbolIdxs[0]] << " (" << result->prob[0] << ")\n";
 	if (result->symbolIdxs[1] > -1)
 		cout << "2: " << SYMBOLS[result->symbolIdxs[1]] << " (" << result->prob[1] << ")\n";
 	if (result->symbolIdxs[2] > -1)
-		cout << "3: " << SYMBOLS[result->symbolIdxs[2]] << " (" << result->prob[2] << ")\n";
+		cout << "3: " << SYMBOLS[result->symbolIdxs[2]] << " (" << result->prob[2] << ")\n";*/
 
 	//ImageProcessing::showImage(resizedImg);
 	resizedImg.release();
