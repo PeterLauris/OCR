@@ -36,7 +36,7 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 	bitwise_not(subImg, subImg);
 	findNonZero(subImg, Points);
 	if (Points.empty()) {
-		cout << "Points are empty!!!";
+		//cout << "Points are empty!!!";
 		//showImage(subImg);
 		return Mat();
 	}
@@ -90,7 +90,6 @@ cv::Mat ImageProcessing::prepareImage(cv::Mat subImg) {
 }
 
 std::string ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGroup*> spacingGroups, int spacingIterationWidth, int spacingTestWidth) {
-	ofstream out("results.txt");
 	std::vector<SymbolResult*> wordResults;
 	int prevGroupX = 0;
 	//int nr = 0;
@@ -100,7 +99,6 @@ std::string ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGrou
 	struct fann *ann = fann_create_from_file("result_letters.net");
 	for (int i = 0; i < spacingGroups.size(); i++) {
 		int currGroupEndX = spacingGroups[i]->startX + (spacingGroups[i]->groupSize * spacingIterationWidth + spacingTestWidth); //iegūst spacing beigas
-		cout << source.cols << " " << currGroupEndX << endl;
 		if (currGroupEndX == source.cols) {
 			isSpacingLast = true;
 		}
@@ -174,7 +172,6 @@ std::string ImageProcessing::testFoundSymbols(cv::Mat source, vector<SpacingGrou
 	std::string resultWord = LanguageModel::determineWord(wordResults);
 	//out << resultWord << " ";
 
-	cout << "Clear wordResults vector" << endl;
 	while (wordResults.size() > 0) {
 		delete wordResults.back();
 		wordResults.pop_back();
@@ -260,8 +257,6 @@ std::string ImageProcessing::iterateOverImage(Mat source) {
 		delete spacingGroups.back();
 		spacingGroups.pop_back();
 	}
-
-	cout << result << endl;
 
 	return result;
 }

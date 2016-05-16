@@ -601,7 +601,7 @@ void NeuralNetwork::trainNN_letters() {
 	const unsigned int num_input = INPUT_SIZE_LETTERS; //ieejas izmērs
 	const unsigned int num_output = SYMBOL_COUNT; //izejas izmērs
 	const unsigned int num_layers = 4; //NN slāņu skaits
-	const float desired_error = 0.000035; //vēlamā trenēšanas kļūda
+	const float desired_error = 0.000033; //vēlamā trenēšanas kļūda
 
 	cout << "Training..." << endl;
 

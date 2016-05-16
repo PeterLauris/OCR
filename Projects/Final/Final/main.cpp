@@ -111,6 +111,7 @@ int main() {
 
 		switch (c) {
 		case '1':
+			LanguageModel::prepareLM();
 			//NeuralNetwork::trainOCR_spacing();
 			//NeuralNetwork::trainOCR_letters();
 			source = imread("../../../images/pages/piemers.png");
@@ -131,7 +132,7 @@ int main() {
 				//ImageProcessing::showImage(subImg, "Cutout SubImg");
 				subImg.release();
 			}
-			out.open("result2.txt");
+			out.open("rezultats.txt");
 			cout << result << endl;
 			out << result;
 			out.close();

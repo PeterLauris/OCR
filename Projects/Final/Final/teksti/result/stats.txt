@@ -1,6 +1,6 @@
-7ļ-8Ķ(7vČ((Ļļļķķ(ļĻČķ47-ČĶ)Ļķ(-ļļĶĻ-ČĻ7(Č
+vaD
 	p( <unk> | <s> ) 	= [OOV] 0 [ -inf ]
-	p( </s> | <unk> ...) 	= [1gram] 0.0323918 [ -1.48956 ]
+	p( </s> | <unk> ...) 	= [1gram] 0.029223 [ -1.53427 ]
 1 sentences, 1 words, 1 OOVs
-0 zeroprobs, logprob= -1.48956 ppl= 30.872 ppl1= undefined
+0 zeroprobs, logprob= -1.53427 ppl= 34.2196 ppl1= undefined
 

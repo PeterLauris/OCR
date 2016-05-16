@@ -42,7 +42,7 @@ double LanguageModel::getCredibility(std::vector<SymbolResult*> word, int* choic
 double LanguageModel::getCredibilityLM(std::string word) {
 	if (useLM == NULL) {
 		//cout << "LM not prepared!\n";
-		return 1;
+		//return 1;
 		prepareLM();
 	}
 
@@ -104,7 +104,7 @@ std::string LanguageModel::determineWord(std::vector<SymbolResult*> wordResults)
 			int prevChoiceIdx = choiceIdxs[i];
 			choiceIdxs[i] = j;
 			tmpResultCredibility = getCredibility(wordResults, choiceIdxs) * getCredibilityLM(Utilities::wordToString(wordResults, choiceIdxs));
-			cout << Utilities::wordToString(wordResults, choiceIdxs) << " (" << tmpResultCredibility << ")\n";
+			//cout << Utilities::wordToString(wordResults, choiceIdxs) << " (" << tmpResultCredibility << ")\n";
 
 			if (tmpResultCredibility > bestResultCredibility) {
 				bestResult = Utilities::wordToString(wordResults, choiceIdxs);
