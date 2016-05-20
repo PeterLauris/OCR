@@ -1,4 +1,4 @@
-vaD
+prD!ĪMmmāĪ
 	p( <unk> | <s> ) 	= [OOV] 0 [ -inf ]
 	p( </s> | <unk> ...) 	= [1gram] 0.029223 [ -1.53427 ]
 1 sentences, 1 words, 1 OOVs
